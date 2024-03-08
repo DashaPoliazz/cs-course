@@ -1,0 +1,1 @@
+stack.push(1);stack.push(2);const result = stack.pop() - stack.pop(); console.log(result);heap.insert(12);heap.delete();

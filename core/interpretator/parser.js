@@ -16,7 +16,7 @@ const parseFile = async (filepath) => {
   const code = await fs.promises.readFile(filepath, "utf-8");
   const preparedFile = prepareFile(code);
 
-  const outputPath = path.join(process.cwd(), "./notBin", "output.js");
+  const outputPath = path.join(process.cwd(), "./not-bin", "output.js");
 
   await transpile(preparedFile, outputPath);
 };

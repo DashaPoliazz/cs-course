@@ -4,7 +4,7 @@ const vm = require("vm");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const filepath = path.join(process.cwd(), "./notBin", "output.js");
+const filepath = path.join(process.cwd(), "./not-bin", "output.js");
 const RUN_OPTIONS = { timeout: 5000, displayErrors: true };
 
 module.exports = async (sandbox) => {
