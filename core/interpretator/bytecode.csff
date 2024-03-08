@@ -1,0 +1,11 @@
+PUSH 1
+PUSH 2
+
+FN my_function(x,y):
+SUB
+ret
+
+CALL my_function
+
+MOV 12
+GET
