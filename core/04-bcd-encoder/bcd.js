@@ -55,14 +55,16 @@ class BinaryCalculator {
 }
 
 class BCD {
-  #BIN_PREFIX = "0b";
   #BCD_BIT_LEN = 4;
   #CARRY_OVER_SIZE = 15;
   #MAX_VALID_BCD_SIZE = 9;
   #NORMALIZER = 0b0110;
+  #NINE_MASK = 0b1001;
 
   #numbers;
   #idx = 7;
+
+  #ninesComplement = 0;
 
   constructor(number) {
     this.#numbers = new Array(8);
@@ -73,144 +75,175 @@ class BCD {
     this.valueOf();
   }
 
-  complementToNine() {
-    let result = 0;
+  complementToNine(complementGrade) {
     const mask = 0b1111;
-    const nineMask = 0b1001;
-    let n = this.bcd;
+    let bcd = this.bcd;
 
-    for (let shift = 0; n !== 0; shift += this.#BCD_BIT_LEN, n >>>= 4) {
-      const bits = n & mask;
-      let complement = BinaryCalculator.subtract(nineMask, bits);
-      // console.log(`${nineMask} - ${bits}`);
-      // console.log(`${nineMask.toString(2)}`);
-      // console.log(`${bits.toString(2).padStart(4, 0)}`);
-      // console.log("===========");
-      // console.log(`${complement.toString(2)}`);
-      complement <<= shift;
-      result |= complement;
+    // Reading each 4 bits of BCD and perform binary substraction
+    // BCD = 0001 0010 0101 (125)
+    //   1. 1001(9) - 0101(5) = 0100(4)
+    //   2. 1001(9) - 0010(2) = 0111(7)
+    //   3. 1001(9) - 0001(1) = 1000(8)
+    // OUT = 1000(8) 0111(7) 0100(4)
+    for (
+      let shift = 0;
+      complementGrade > 0;
+      shift += this.#BCD_BIT_LEN, bcd >>>= 4, complementGrade--
+    ) {
+      const bits = bcd & mask;
+      let substraction = BinaryCalculator.subtract(this.#NINE_MASK, bits);
+      substraction <<= shift;
+      this.#ninesComplement |= substraction;
     }
 
-    console.log("9's COMPLEMENT:", result.toString(2));
-
-    return result;
+    return this.#ninesComplement;
   }
 
-  // decimal = 65536
-  // returns 0b01100101010100110110 или 415030
   valueOf() {
     let decimal = this.number;
 
-    let shift = 0;
-    for (; decimal > 0; shift += this.#BCD_BIT_LEN) {
+    for (let shift = 0; decimal > 0; shift += this.#BCD_BIT_LEN) {
+      // Takes first grade of decimal number
       const digit = decimal % 10;
-      const binDigit = digit.toString(2).padStart(4, 0);
-      this.#numbers[this.#idx] = binDigit;
-      this.bcd |= parseInt(binDigit, 2) << shift;
+      // Adds it to the bcd
+      this.bcd |= digit << shift;
+      // Chops the already added first grade
       decimal = Math.floor(decimal / 10);
     }
 
     return this.bcd;
   }
 
-  // decimal = 65536
-  // idx = 0 =>    6
-  // idx = 1 =>   3
-  // idx = 2 =>  5
-  // idx= -1 =>6
-  // idx= 02 => 5
-  get(idx) {
-    // It's possible to calc amount of nums in number with
-    // bit operation
-    const len = this.number.toString().length;
+  get(idx = 0) {
+    // Calculating the amount of grades of the number
+    const len = Math.floor(Math.log10(Math.abs(this.number))) + 1;
+    // Calculating the 'shift'. Shift describes the offset we have
+    // to apply to mask to read exactly that 4 bits we need
     const shift = (idx < 0 ? len + idx : idx) * this.#BCD_BIT_LEN;
-    const readMask = 0b1111 << shift;
-    const result = (readMask & this.bcd) >> shift;
+    // Let's imagine we want read 0 idx
+    //   4   3    2    1    0   -> indexes
+    //   6   5    5    3    6   -> decimal
+    // 0110 0101 0101 0011 0110 -> BCD
+    //          &1111           -> 0101 & 1111 = 0101
+    const mask = 0b1111 << shift;
+    const out = (mask & this.bcd) >> shift;
 
-    return result;
+    return out;
   }
 
   // TODO:
   // [ ] Incorrect result will be occured if 9 would stay in any grade of the number.
-  add(summand) {
-    let invalidPlaces = 0;
-    let maybeResult = 0;
-
+  add(summand1, summand2, options = { isDecimal: true }) {
+    let out = 0;
     const mask = 0b1111;
 
     let shift = 0;
-    let summand1 = this.bcd;
-    let summand2 = new BCD(summand).valueOf();
-    // DEBUG
-    const maxLength = Math.max(
-      summand1.toString(2).length,
-      summand2.toString(2).length,
-    );
-    console.log("S1 = ", summand1.toString(2).padStart(maxLength, 0));
-    console.log("S2 = ", summand2.toString(2).padStart(maxLength, 0));
-    // DEBUG
+    summand1 = options.isDecimal ? new BCD(summand1).valueOf() : summand1;
+    summand2 = options.isDecimal ? new BCD(summand2).valueOf() : summand2;
+
+    // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+    // const maxLength = Math.max(
+    //   summand1.toString(2).length,
+    //   summand2.toString(2).length,
+    // );
+    // console.log("S1 = ", summand1.toString(2).padStart(maxLength, 0));
+    // console.log("S2 = ", summand2.toString(2).padStart(maxLength, 0));
+    // console.log("\n");
+    // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+
     let carry = 0;
     while (summand1 !== 0 || summand2 !== 0 || carry !== 0) {
-      // base case:
-      // 1. Both summands are 0, then carry is 1
-      // if (summand1 === 0 && summand2 === 0) {
-      //   // We have 'cycle' adding 'carry' until it become 0.
-      //   // But first of all let's move shift in the start
-      //   // to perform all the operations below from the start
-      //   shift = 0;
-      // }
+      let needToNormalize = false;
 
       // reading first bits of summands
       const bits1 = summand1 & mask;
       const bits2 = summand2 & mask;
       // adding them
       let sum = BinaryCalculator.add(bits1, bits2);
-      console.log("SUM BEFORE ADDING CARRY:", sum.toString(2));
-      // adding carry
+      if (sum > this.#MAX_VALID_BCD_SIZE) needToNormalize = true;
+
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+      // console.log(" bits1: ", bits1.toString(2).padStart(4, 0));
+      // console.log("+bits2: ", bits2.toString(2).padStart(4, 0));
+      // console.log("result: ", sum.toString(2));
+      // console.log("\n");
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+
+      // Adding carry
       sum = BinaryCalculator.add(sum, carry);
-      console.log("SUM AFTER ADDING CARRY:", sum.toString(2));
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+      // console.log(" sum  : ", sum.toString(2).padStart(4, 0));
+      // console.log("+carry: ", carry.toString(2).padStart(4, 0));
+      // console.log("result: ", sum.toString(2));
+      // console.log("\n");
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
       carry = 0;
-      // setting 'carry' if appears
-      if (sum > this.#CARRY_OVER_SIZE) {
-        carry = 1;
-        console.log("CARRY BVLOCK");
-      }
+
+      // Potentially, carry could appear again
+      // If the sum will be bigger or equal to 16 (10000)
+      // Thus, 10000 takes 5 bits, but we can work only with 4
+      // Then we need to set carry again
+
+      if (sum > this.#CARRY_OVER_SIZE) carry = 1;
+
       // the sum can be made of 5bits
       // therefore we have to read first 4
       sum &= mask;
+
       // sum > 9 is invalid n
       // memoizing places we have to normalize later
-      if (sum > this.#MAX_VALID_BCD_SIZE) {
+      if (
+        sum > this.#MAX_VALID_BCD_SIZE ||
+        (bits1 >= 8 && bits2 >= 8) ||
+        needToNormalize
+      ) {
         // Creating normalizer mask. For example
         // 1001 1000 1111 0101
         //           !!!!
         //           0110 0000 -> normalizing mask has been created with 'shift'
-        const invalidPlace = this.#NORMALIZER << shift;
-        // Inserting invalid place into 'invalidPlaces'
-        invalidPlaces |= invalidPlace;
 
         // trying to fix this problem manually
         // According to fact that we either have a carry or invalid num
         // we can perform +6 here
-        console.log("before normalizing", sum.toString(2));
+
+        // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+        // console.log("Invalid sum = ", sum.toString(2), "(", sum, ">", "9", ")");
+        // console.log(" ", sum.toString(2).padStart(4, 0));
+        // console.log("+", this.#NORMALIZER.toString(2).padStart(4, 0));
+        // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+
         sum = BinaryCalculator.add(sum, this.#NORMALIZER);
-        console.log("AFTER normalizing:", sum.toString(2));
+
+        // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+        // console.log("=", sum.toString(2).padStart(4, 0));
+        // console.log("\n");
+        // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+
+        // But carry may appear again!
         if (sum > this.#CARRY_OVER_SIZE) {
+          // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+          // console.log("Invalid sum again =", sum.toString(2).padStart(4, 0));
+          // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+
           carry = 1;
           sum &= mask;
-          console.log("NORMALIZED SUM:", sum.toString(2));
+
+          // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+          // console.log("Taking last 4 bits= ", sum.toString(2).padStart(4, 0));
+          // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
         }
       }
 
       // Creating the mask that will be inserted into 'maybeResult'
       const resultSum = sum << shift;
-      console.log("REULTSUM:", resultSum.toString(2).padStart(4, 0));
-      // Inserting resultSum into 'maybeResult'
-      maybeResult |= resultSum;
 
-      console.log(`S1 = ${bits1.toString(2).padStart(4, 0)} / ${bits1}`);
-      console.log(`S2 = ${bits2.toString(2).padStart(4, 0)} / ${bits2}`);
-      console.log(`SUMM ${sum.toString(2).padStart(0, 3)} / ${sum}`);
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+      // console.log("result:", resultSum.toString(2).padStart(4, 0));
+      // console.log("\n");
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+
+      // Inserting resultSum into 'maybeResult'
+      out |= resultSum;
 
       // moving summands for 4 bits in the right
       summand1 >>= this.#BCD_BIT_LEN;
@@ -218,32 +251,41 @@ class BCD {
       // moving shift for 4 bits in the right (iterating over every 4 bits)
       shift += this.#BCD_BIT_LEN;
 
-      console.log("===========ITERATION===========");
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+      // console.log("===========ITERATION===========");
+      // console.log("\n");
+      // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
     }
 
-    console.log(`PLACES TO FIX: ${invalidPlaces.toString(2)}`);
-    console.log(`MAYBERESULT: ${maybeResult.toString(2)}`);
-
-    // now we have to fix invalid places in 'maybeResult
-    return maybeResult;
+    return out;
   }
+  //        вычитаемое
+  substract(subtrahend) {
+    // Since substracting is a + (-b), where b is 9's complement of b,
+    // it's possible to perform substraction operation via summation
+    if (this.bcd === subtrahend) return 0;
 
-  // Substraction can be performed by addition with signed value
-  substract(minuend) {
-    // Perform nine's complement to the minuend
-    console.log("CURRENT BCD:", this.bcd.toString(2));
+    // We have to know til what grade we want to complement our number
+    // We can calculate how many grades has decimal with simple formula:
+    const complementGrade = Math.floor(Math.log10(Math.abs(this.number))) + 1;
+    const ninesComplementOfSubtrahend = new BCD(subtrahend).complementToNine(
+      complementGrade,
+    );
 
-    // TODO:
-    // We have built-in nine's complement
-    // but it doesn't work correctly with built-in because
-    // of transoformation of summand inside "this.add"
+    // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+    console.log("MINUEND   :", this.bcd.toString(2));
+    console.log("SUBTRAHEND:", new BCD(subtrahend).valueOf().toString(2));
+    console.log("GRADES    :", complementGrade);
+    console.log("COMPLEMENT:", ninesComplementOfSubtrahend.toString(2));
+    // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
 
-    // adding decimal (nine's complement) becuase add supports decimals
-    // TODO:
-    // [ ] HARDCODED 999
-    const sum = this.add(999 - minuend);
+    const sum = this.add(this.bcd, ninesComplementOfSubtrahend, {
+      isDecimal: false,
+    });
 
-    console.log("SDIFOPSIDFPOISDOPFISDF", sum.toString(2));
+    // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
+    console.log("SUM OF BCD AND COMPLEMENT = ", sum.toString(2));
+    // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
 
     // Problem:
     // In case of overflowing to elder 4 bits we have to carry bit
@@ -262,21 +304,24 @@ class BCD {
 
     // We need to understand if the overflowing is exists
     let substractionResult = sum;
-    let significatnBits = 0;
+    let significantBit = 0;
     while (substractionResult !== 0) {
       const currentBits = substractionResult & 0b1111;
-      significatnBits = currentBits;
+      significantBit = currentBits;
       substractionResult >>= this.#BCD_BIT_LEN;
     }
 
-    if (significatnBits === 1) {
+    if (significantBit === 1) {
       // Creating number without leading bit
       // 1 0001 0011 0110 -> 0001 0011 0110
       let mask = 1 << Math.floor(Math.log2(sum));
       const withoutSignificantBit = sum & ~mask;
 
       this.bcd = withoutSignificantBit;
-      const substractionResult = this.add(1);
+      const substractionResult = this.add(withoutSignificantBit, 1, {
+        isDecimal: false,
+      });
+
       return substractionResult;
     }
 
@@ -288,28 +333,55 @@ class BCD {
     if (multiplier === 0) return 0;
     if (multiplier === 1) return this.bcd;
 
-    for (let i = 0; i < multiplier - 1; i++) {
-      const sum = this.add(this.number);
-      this.bcd = sum;
+    let product = 0;
+    while (multiplier > 0) {
+      product = new BCD().add(product, this.bcd, {
+        isDecimal: false,
+      });
+      multiplier--;
     }
 
-    return this.bcd;
+    return product;
   }
 
   divide(divisor) {
+    if (divisor > this.number) throw new Error("Unsupported operation :(");
     if (divisor === 1) return this.bcd;
     if (divisor === 0) throw new Error("Cannot divide by zero");
 
+    let count = this.number;
     let quotient = 0;
 
-    while (this.number >= divisor) {
+    while (count > 0) {
       this.bcd = this.substract(divisor);
-      this.number -= divisor;
       quotient++;
+      count -= divisor;
     }
 
-    const divisionResult = new BCD(quotient).valueOf();
-
-    return divisionResult;
+    console.log("DECIMALRESULT:", quotient);
+    return new BCD(quotient).valueOf();
   }
 }
+
+const ten = new BCD(678);
+const eleven = new BCD(67);
+// console.log(
+//   "BCDSUM:",
+//   ten
+//     .add(ten.valueOf(), eleven.valueOf(), {
+//       isDecimal: false,
+//     })
+//     .toString(2),
+// );
+// console.log("NINESCOMPLEMENT:", bcd.complementToNine().toString(2));
+// console.log("VALUEOF:", bcd.valueOf().toString(2));
+// console.log("GET:", bcd.get(4).toString(2));
+// console.log("ADD", bcd.add(10, 1).toString(2));
+// console.log(BinaryCalculator.subtract(99, 11));
+// console.log("MULTIPLICATION:", bcd.multiply(10).toString(2));
+
+const n = new BCD(99);
+// console.log("COMPLEMENT RESULT:", n.complementToNine(3).toString(2));
+// console.log("SUBSTRACTION RESULT:", n.substract(67).toString(2));
+// console.log("MULTIPLILCATION RESULT:", n.multiply(2).toString(2));
+console.log("DIVISION RESULT:", n.divide(9));
