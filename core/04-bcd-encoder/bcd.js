@@ -1,15 +1,15 @@
 "use strict";
 
 class BinaryCalculator {
-  static add(addend1, addend2) {
+  static add(summand1, summand2) {
     let result = 0;
     const mask = 1;
     let carry = 0;
     let shift = 0;
 
-    while (addend1 !== 0 || addend2 !== 0 || carry !== 0) {
-      const bit1 = addend1 & mask;
-      const bit2 = addend2 & mask;
+    while (summand1 !== 0 || summand2 !== 0 || carry !== 0) {
+      const bit1 = summand1 & mask;
+      const bit2 = summand2 & mask;
 
       let sum = bit1 ^ bit2 ^ carry;
 
@@ -21,8 +21,8 @@ class BinaryCalculator {
 
       if (bit1 & bit2) carry |= 1;
 
-      addend1 >>>= 1;
-      addend2 >>>= 1;
+      summand1 >>>= 1;
+      summand2 >>>= 1;
       shift++;
 
       result |= sum;
@@ -60,15 +60,9 @@ class BCD {
   #MAX_VALID_BCD_SIZE = 9;
   #NORMALIZER = 0b0110;
   #NINE_MASK = 0b1001;
-
-  #numbers;
-  #idx = 7;
-
-  #ninesComplement = 0;
+  #OVERFLOWING_FOR_TENS = 8;
 
   constructor(number) {
-    this.#numbers = new Array(8);
-
     this.number = number;
     this.bcd = 0;
 
@@ -78,6 +72,7 @@ class BCD {
   complementToNine(complementGrade) {
     const mask = 0b1111;
     let bcd = this.bcd;
+    let out = 0;
 
     // Reading each 4 bits of BCD and perform binary substraction
     // BCD = 0001 0010 0101 (125)
@@ -93,10 +88,10 @@ class BCD {
       const bits = bcd & mask;
       let substraction = BinaryCalculator.subtract(this.#NINE_MASK, bits);
       substraction <<= shift;
-      this.#ninesComplement |= substraction;
+      out |= substraction;
     }
 
-    return this.#ninesComplement;
+    return out;
   }
 
   valueOf() {
@@ -194,7 +189,8 @@ class BCD {
       // memoizing places we have to normalize later
       if (
         sum > this.#MAX_VALID_BCD_SIZE ||
-        (bits1 >= 8 && bits2 >= 8) ||
+        (bits1 >= this.#OVERFLOWING_FOR_TENS &&
+          bits2 >= this.#OVERFLOWING_FOR_TENS) ||
         needToNormalize
       ) {
         // Creating normalizer mask. For example
@@ -259,7 +255,6 @@ class BCD {
 
     return out;
   }
-  //        вычитаемое
   substract(subtrahend) {
     // Since substracting is a + (-b), where b is 9's complement of b,
     // it's possible to perform substraction operation via summation
@@ -273,10 +268,10 @@ class BCD {
     );
 
     // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
-    console.log("MINUEND   :", this.bcd.toString(2));
-    console.log("SUBTRAHEND:", new BCD(subtrahend).valueOf().toString(2));
-    console.log("GRADES    :", complementGrade);
-    console.log("COMPLEMENT:", ninesComplementOfSubtrahend.toString(2));
+    // console.log("MINUEND   :", this.bcd.toString(2));
+    // console.log("SUBTRAHEND:", new BCD(subtrahend).valueOf().toString(2));
+    // console.log("GRADES    :", complementGrade);
+    // console.log("COMPLEMENT:", ninesComplementOfSubtrahend.toString(2));
     // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
 
     const sum = this.add(this.bcd, ninesComplementOfSubtrahend, {
@@ -284,7 +279,7 @@ class BCD {
     });
 
     // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
-    console.log("SUM OF BCD AND COMPLEMENT = ", sum.toString(2));
+    // console.log("SUM OF BCD AND COMPLEMENT = ", sum.toString(2));
     // UNCOMMENT THIS CODE TO VISUALISE THE ADDING PROCESS
 
     // Problem:
@@ -358,30 +353,47 @@ class BCD {
       count -= divisor;
     }
 
-    console.log("DECIMALRESULT:", quotient);
     return new BCD(quotient).valueOf();
   }
 }
 
-const ten = new BCD(678);
-const eleven = new BCD(67);
-// console.log(
-//   "BCDSUM:",
-//   ten
-//     .add(ten.valueOf(), eleven.valueOf(), {
-//       isDecimal: false,
-//     })
-//     .toString(2),
-// );
-// console.log("NINESCOMPLEMENT:", bcd.complementToNine().toString(2));
-// console.log("VALUEOF:", bcd.valueOf().toString(2));
-// console.log("GET:", bcd.get(4).toString(2));
-// console.log("ADD", bcd.add(10, 1).toString(2));
-// console.log(BinaryCalculator.subtract(99, 11));
-// console.log("MULTIPLICATION:", bcd.multiply(10).toString(2));
+// Usage:
+const n1 = new BCD(65536);
 
-const n = new BCD(99);
-// console.log("COMPLEMENT RESULT:", n.complementToNine(3).toString(2));
-// console.log("SUBSTRACTION RESULT:", n.substract(67).toString(2));
-// console.log("MULTIPLILCATION RESULT:", n.multiply(2).toString(2));
-console.log("DIVISION RESULT:", n.divide(9));
+console.log(n1.valueOf()); // 0b01100101010100110110 или 415030
+console.log(n1.get(0)); // 6
+console.log(n1.get(1)); // 3
+console.log(n1.get(-1)); // 6
+console.log(n1.get(-2)); // 5
+console.log("\n");
+
+const n2 = new BCD(678);
+console.log(n2.valueOf().toString(2)); // 0110 0111 1000
+
+// 9999999 + 9999999 = 19 999 998
+// 1  9    9    9    9    9    9   8
+// 1 1001 1001 1001 1001 1001 1001 1000
+console.log("ADDITION", new BCD().add(9999999, 9999999).toString(2));
+// 1234567 + 7654321 = 8 8 8 8 8 8 8
+//   8   8    8    8    8    8    8
+// 1000 1000 1000 1000 1000 1000 1000
+console.log("ADDITION", new BCD().add(1234567, 7654321).toString(2)); // 1000 1000 1000 1000 1000 1000 1000
+
+console.log("SUBTRACTION", n2.substract(67).toString(2)); // 110 0001 0001 (6 1 1)
+
+const n3 = new BCD(123456789);
+// 123456789 * 2 = 246 913 578
+//  4    6    9   1    3    5    7    8
+// 100 0110 1001 0001 0011 0101 0111 1000
+// Bug -> lack of 2 (0010) in the start
+console.log("MULTIPLICATION 1", n3.multiply(2).toString(2)); // 100 0110 1001 0001 0011 0101 0111 1000
+
+const n4 = new BCD(2);
+console.log("MULTIPLICATION 2", n4.multiply(2).toString(2)); // 100   (4)
+console.log("MULTIPLICATION 3", n4.multiply(4).toString(2)); // 1000  (8)
+console.log("MULTIPLICATION 4", n4.multiply(6).toString(2)); // 10010 (12)
+
+const n5 = new BCD(999);
+console.log("DIVISION 1", n5.divide(111).toString(2)); // 1001 (9)
+console.log("DIVISION 2", n5.divide(999).toString(2)); // 1    (1)
+console.log("DIVISION 3", n5.divide(333).toString(2)); // 11   (3)
