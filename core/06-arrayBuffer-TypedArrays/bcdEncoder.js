@@ -52,87 +52,175 @@ class BinaryCalculator {
   }
 }
 
-class BCD {
-  #BCD_BITS_SIZE = 4;
-  #BITS_PER_BYTE = 8;
+class Adapter {
+  BCD_BITS_SIZE = 4;
+  BITS_PER_BYTE = 8;
 
+  byteLength;
   buff;
   u8Array;
 
-  constructor(entity, precision) {
-    this.entity = entity;
-    this.precision = precision;
-    this.byteLength = 0;
-
-    this.#initBuffer();
+  get byteLength() {
+    throw new Error("getter 'byteLength' should be implemented in subclass");
   }
 
-  #initBuffer() {
-    let entity = this.entity;
+  get buffer() {
+    throw new Error("getter 'buffer' should be implemented in subclass");
+  }
 
-    if (typeof entity === "bigint") {
-      // Should be able to work with decimal
-      let num = entity;
-      // entity = 10.42
-      // need to alloc 2 byte (as for 1042)
-      const stringifiedBigInt = num.toString();
-      const grades = stringifiedBigInt.length;
-      // each bcd number takes 4 bits
-      let bitsQuery = grades * this.#BCD_BITS_SIZE;
-      // "-4".length * 4 = 8.
-      // negative numbers will be represented as 9's complement
-      if (num < 0) bitsQuery -= this.#BCD_BITS_SIZE;
-      const byteLength = Math.ceil(bitsQuery / this.#BITS_PER_BYTE);
+  get u8Array() {
+    throw new Error("getter 'u8Array' should be implemented in subclass");
+  }
+}
 
-      this.byteLength = byteLength;
-      this.buff = new ArrayBuffer(this.byteLength);
-      this.u8Array = new Uint8Array(this.buff);
-    } else if (typeof entity === "number") {
-      // Should be able to work with decimal
-      let num = entity;
-      // entity = 10.42
-      // need to alloc 2 byte (as for 1042)
-      if (this.precision) num *= 10 ** this.precision;
-      const grades = num.toString().length;
-      // each bcd number takes 4 bits
-      let bitsQuery = grades * this.#BCD_BITS_SIZE;
-      // "-4".length * 4 = 8.
-      // negative numbers will be represented as 9's complement
-      if (num < 0) bitsQuery -= this.#BCD_BITS_SIZE;
-      const byteLength = Math.ceil(bitsQuery / this.#BITS_PER_BYTE);
-
-      this.byteLength = byteLength;
-      this.buff = new ArrayBuffer(this.byteLength);
-      this.u8Array = new Uint8Array(this.buff);
-    } else if (entity instanceof BCD) {
-      const bcd = entity;
-
-      this.byteLength = bcd.byteLength;
-      this.buff = new ArrayBuffer(this.byteLength);
-      this.u8Array = new Uint8Array(this.buff);
-    } else if (entity instanceof ArrayBuffer) {
-      const buff = entity;
-
-      this.byteLength = buff.byteLength;
-      this.buff = new ArrayBuffer(this.byteLength);
-      this.u8Array = new Uint8Array(this.buff);
-    } else if (typeof entity === "string") {
-      const grades = entity.split(".").reduce((acc, n) => acc + n.length, 0);
-      // each bcd number takes 4 bits
-      let bitsQuery = grades * this.#BCD_BITS_SIZE;
-      // "-4".length * 4 = 8.
-      // negative numbers will be represented as 9's complement
-      if (entity[0] === "-") bitsQuery -= this.#BCD_BITS_SIZE;
-      const byteLength = Math.ceil(bitsQuery / this.#BITS_PER_BYTE);
-
-      this.byteLength = byteLength;
-      this.buff = new ArrayBuffer(this.byteLength);
-      this.u8Array = new Uint8Array(this.buff);
-    } else {
-      throw new Error(`typeof entity === ${typeof entity} is not supported`);
+class BigintAdapter extends Adapter {
+  constructor(entity) {
+    if (typeof entity !== "bigint") {
+      throw new Error(`${typeof entity} !== 'bigint'`);
     }
 
-    console.log("byteLength", this.byteLength);
+    super();
+
+    let num = entity;
+    // entity = 10.42
+    // need to alloc 2 byte (as for 1042)
+    const stringifiedBigInt = num.toString();
+    const grades = stringifiedBigInt.length;
+    // each bcd number takes 4 bits
+    let bitsQuery = grades * this.BCD_BITS_SIZE;
+    // "-4".length * 4 = 8.
+    // negative numbers will be represented as 9's complement
+    if (num < 0) bitsQuery -= this.BCD_BITS_SIZE;
+    const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
+
+    this.byteLength = byteLength;
+    this.buff = new ArrayBuffer(this.byteLength);
+    this.u8Array = new Uint8Array(this.buff);
+  }
+
+  get byteLength() {
+    return this.byteLength;
+  }
+
+  get buffer() {
+    return this.buff;
+  }
+
+  get u8Array() {
+    return this.u8Array;
+  }
+}
+
+class NumberAdapter extends Adapter {
+  constructor(entity) {
+    if (typeof entity !== "number") {
+      throw new Error(`${typeof entity} !== 'number'`);
+    }
+
+    super();
+
+    let num = entity;
+    // entity = 10.42
+    // need to alloc 2 byte (as for 1042)
+    if (this.precision) num *= 10 ** this.precision;
+    const grades = num.toString().length;
+    // each bcd number takes 4 bits
+    let bitsQuery = grades * this.BCD_BITS_SIZE;
+    // "-4".length * 4 = 8.
+    // negative numbers will be represented as 9's complement
+    if (num < 0) bitsQuery -= this.BCD_BITS_SIZE;
+    const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
+
+    this.byteLength = byteLength;
+    this.buff = new ArrayBuffer(this.byteLength);
+    this.u8Array = new Uint8Array(this.buff);
+  }
+
+  get byteLength() {
+    return this.byteLength;
+  }
+
+  get buffer() {
+    return this.buff;
+  }
+
+  get u8Array() {
+    return this.u8Array;
+  }
+}
+
+class BCDAdapter extends Adapter {
+  constructor(entity) {
+    if (!(entity instanceof BCD)) {
+      throw new Error(`Entity is instance of BCD class`);
+    }
+
+    super();
+
+    const bcd = entity;
+
+    this.byteLength = bcd.byteLength;
+    this.buff = new ArrayBuffer(this.byteLength);
+    this.u8Array = new Uint8Array(this.buff);
+  }
+
+  get byteLength() {
+    return this.byteLength;
+  }
+
+  get buffer() {
+    return this.buff;
+  }
+
+  get u8Array() {
+    return this.u8Array;
+  }
+}
+
+class StringAdapter extends Adapter {
+  constructor(entity) {
+    if (typeof entity !== "string") {
+      throw new Error(`${typeof entity} !== 'string'`);
+    }
+
+    super();
+
+    const grades = entity.split(".").reduce((acc, n) => acc + n.length, 0);
+    // each bcd number takes 4 bits
+    let bitsQuery = grades * this.BCD_BITS_SIZE;
+    // "-4".length * 4 = 8.
+    // negative numbers will be represented as 9's complement
+    if (entity[0] === "-") bitsQuery -= this.BCD_BITS_SIZE;
+    const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
+
+    this.byteLength = byteLength;
+    this.buff = new ArrayBuffer(this.byteLength);
+    this.u8Array = new Uint8Array(this.buff);
+  }
+
+  get byteLength() {
+    return this.byteLength;
+  }
+
+  get buffer() {
+    return this.buff;
+  }
+
+  get u8Array() {
+    return this.u8Array;
+  }
+}
+
+class BCD {
+  constructor(adaptedEntity, precision) {
+    if (!(adaptedEntity instanceof Adapter)) {
+      throw new Error(
+        "Adapted entity should be instanced from 'Adapter' class",
+      );
+    }
+
+    Object.assign(this, adaptedEntity);
+    this.precision = precision;
   }
 
   valueOf() {}
@@ -152,6 +240,6 @@ class BCD {
   ceil() {}
 }
 
-const bcd = new BCD(12345n);
+const bcd = new BCD(new NumberAdapter(40.42));
 console.log("Value of:", bcd.valueOf()); // Также вернет ArrayBuffer
 console.log("Buffer:", bcd.buffer);
