@@ -1,0 +1,62 @@
+# ДЗ к лекции База#7
+
+## Доработать класс для работы с BCD числами
+
+1. Конструктор теперь должен принимать на вход один из следующих параметров:
+
+   1. Число BigInt.
+   2. Число Number.
+   3. Экземпляр класса BCD.
+   4. ArrayBuffer.
+   5. Строка.
+
+2. Внутренний массив чисел теперь должен быть представлен как Uint8Array. Ограничения SMI в 31 больше нет.
+
+3. Добавить набор геттеров/методов для получения числа BCD в разных форматах.
+
+   1. Геттер `buffer` для получения сырого ArrayBuffer с валидным BCD числом.
+
+      ```js
+      const bcd = new BCD(12);
+      console.log(bcd.buffer);    // ArrayBuffer в котором закодировано 1100(знак)_0001_0010
+      console.log(bcd.valueOf()); // Также вернет ArrayBuffer
+      ```
+
+   2. Метод `toString` для возврата строкового представления BCD числа в виде 10-х цифр и поддержкой знака.
+
+      ```js
+      const bcd = new BCD(-5678);
+      console.log(bcd.toString()); // '-5678'
+      ```
+
+   3. Метод `toBigInt` для возврата числа BCD в виде BigInt.
+
+      ```js
+      const bcd = new BCD(-5678);
+      console.log(bcd.toBigInt()); // BigInt(-5678)
+      ```
+
+   4. Метод `toNumber` для возврата числа BCD в виде Number.
+
+      ```js
+      const bcd = new BCD(-5678);
+      console.log(bcd.toNumber()); // -5678
+      ```
+
+4. Добавить поддержу дробей через статическую точку.
+
+   ```js
+   const bcd = new BCD(1042, 2 /* Количество знаков после запятой */);
+   console.log(bcd.toNumber()); // 10.42
+
+   const bcd2 = new BCD('10.42');
+   console.log(bcd.toNumber()); // 10.42
+
+   const bcd2 = new BCD(10.42);
+   console.log(bcd.toString()); // '10.42'
+
+   const bcd2 = new BCD(10.42);
+   console.log(bcd.toBigInt()); // BigInt(1042)
+   ```
+
+5. Добавить методы для целочисленного деления и округления по аналогии с Math.floor/round/ceil.
