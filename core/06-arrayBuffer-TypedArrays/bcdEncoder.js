@@ -55,7 +55,7 @@ class BCD {
 
       for (let i = this.byteLength - 1; i >= 0; i--) {
         const twoBcd = this.u8Array[i];
-        const ninesComplement = this.complementToNine(twoBcd, 2);
+        const ninesComplement = this.#complementToNine(twoBcd, 2);
         complementedToNine[i] = ninesComplement;
       }
     }
@@ -66,12 +66,28 @@ class BCD {
     return this.isNegative ? this.complementedToNine : this.u8Array;
   }
 
-  get(idx = 0) {
+  get(idx = 1) {
+    const isNegative = idx < 0;
+    const grades = !isNegative ? this.grades - 1 : this.grades;
+    // Rounding index to avoid 'out of bounds' ub.
+    if (Math.abs(idx) > grades)
+      idx = !isNegative ? (idx % grades) - 1 : idx % grades;
+    const isEven = idx % 2 === 0;
+    // for positive
+    if (isNegative) idx = grades + idx;
+    const positiveMask = isEven ? 0b0000_1111 : 0b1111_0000;
+    const negativeMask = isEven ? 0b1111_0000 : 0b0000_1111;
+    const mask = !isNegative ? positiveMask : negativeMask;
+    const needToShift = mask === 0b1111_0000;
     // Define index the bcd is in
-    console.log("GRADES:", this.grades);
+    // this.grades / 0 !
+    const cellIdx = Math.abs(this.u8Array.length - 1 - Math.floor(idx / 2));
+    const bcdPair = this.u8Array[cellIdx];
+    const out = bcdPair & mask;
+    return needToShift ? out >> this.BCD_BITS_SIZE : out;
   }
 
-  complementToNine(bcd, complementGrade) {
+  #complementToNine(bcd, complementGrade) {
     const mask = 0b1111;
     let out = 0;
 
@@ -116,12 +132,11 @@ class BCD {
   }
 
   floor() {
-    console.log(this.debugVisualiseUint8Array(this.u8Array));
     return this.#extractIntegerPart();
   }
   round() {
     console.log(this.debugVisualiseUint8Array(this.u8Array));
-    // Taking first value after .
+    // Taking first value after dot
     const floatingPointsBytes = Math.ceil(this.precision / 2);
     const position = this.byteLength - floatingPointsBytes;
     const mask = this.precision % 2 === 0 ? 0b1111_0000 : 0b0000_1111;
@@ -199,3 +214,34 @@ class BCD {
     console.log(msg, a);
   }
 }
+
+// const bcd = new BCD(new BigintAdapter(-1234567890n), 1);
+// console.log("Value of:", bcd.valueOf()); // Также вернет ArrayBuffer
+// console.log("Buffer:", bcd.buffer);
+
+// console.log(bcd.toString()); // '-1234567890'
+// console.log(bcd.toBigInt());
+// console.log(bcd.toNumber()); // -1234567890
+
+// const stringifiedBCD = new BCD(new StringAdapter("10.42"));
+// console.log(stringifiedBCD.valueOf()); // Также вернет ArrayBuffer
+// console.log(stringifiedBCD.buffer);
+
+// console.log("StringAdapter.toString():", stringifiedBCD.toString()); // '-10.42'
+// console.log("StringAdapter.toBigint():", stringifiedBCD.toBigInt());
+// console.log("StringAdapter.toNumber():", stringifiedBCD.toNumber()); // -10.42
+
+// const bcdBcd = new BCD(
+//   new BCDAdapter(new BCD(new BigintAdapter(-1234567890n))),
+// );
+// console.log("BCDAdapter.toString():", bcdBcd.toString()); // '-1234567890'
+// console.log("BCDAdapter.toBigint():", bcdBcd.toBigInt());
+// console.log("BCDAdapter.toNumber():", bcdBcd.toNumber()); // -1234567890
+
+const float = new BCD(new NumberAdapter(-1234.5));
+
+// console.log("Valueof:", float.valueOf());
+// console.log("toString:", float.toString());
+// console.log("Floor:", float.floor());
+console.log("Round:", float.round());
+console.log("GET:", float.get(-7));
