@@ -1,217 +1,17 @@
 "use strict";
 
-class BinaryCalculator {
-  static add(summand1, summand2) {
-    let result = 0;
-    const mask = 1;
-    let carry = 0;
-    let shift = 0;
+const BinaryCalculator = require("./binaryCalculator.js");
+const { Adapter, NumberAdapter } = require("./adapters/adapters.js");
 
-    while (summand1 !== 0 || summand2 !== 0 || carry !== 0) {
-      const bit1 = summand1 & mask;
-      const bit2 = summand2 & mask;
-
-      let sum = bit1 ^ bit2 ^ carry;
-
-      sum <<= shift;
-
-      carry = (bit1 & bit2) | (bit1 & carry) | (bit2 & carry);
-
-      if (bit1 & bit2) carry |= 1;
-
-      summand1 >>>= 1;
-      summand2 >>>= 1;
-      shift++;
-
-      result |= sum;
-    }
-
-    return result;
-  }
-
-  static subtract(minuend, subtrahend) {
-    const binaryMinuend = minuend.toString(2);
-    const binarySubtrahend = subtrahend.toString(2);
-
-    const binaryMaxLength = Math.max(
-      binaryMinuend.length,
-      binarySubtrahend.length,
-    );
-
-    const onesComplement = (~subtrahend + 1) & ((1 << binaryMaxLength) - 1);
-
-    const diff = minuend + onesComplement;
-
-    let binaryDiff = diff.toString(2);
-
-    binaryDiff = binaryDiff
-      .padStart(binaryMaxLength, "0")
-      .slice(-binaryMaxLength);
-
-    return parseInt(binaryDiff, 2);
-  }
-}
-
-class Adapter {
+class BCD {
   BCD_BITS_SIZE = 4;
-  BITS_PER_BYTE = 8;
+  NINE_MASK = 0b1001;
 
   byteLength;
   buff;
   u8Array;
+  complementedToNine;
 
-  get byteLength() {
-    throw new Error("getter 'byteLength' should be implemented in subclass");
-  }
-
-  get buffer() {
-    throw new Error("getter 'buffer' should be implemented in subclass");
-  }
-
-  get u8Array() {
-    throw new Error("getter 'u8Array' should be implemented in subclass");
-  }
-}
-
-class BigintAdapter extends Adapter {
-  constructor(entity) {
-    if (typeof entity !== "bigint") {
-      throw new Error(`${typeof entity} !== 'bigint'`);
-    }
-
-    super();
-
-    let num = entity;
-    // entity = 10.42
-    // need to alloc 2 byte (as for 1042)
-    const stringifiedBigInt = num.toString();
-    const grades = stringifiedBigInt.length;
-    // each bcd number takes 4 bits
-    let bitsQuery = grades * this.BCD_BITS_SIZE;
-    // "-4".length * 4 = 8.
-    // negative numbers will be represented as 9's complement
-    if (num < 0) bitsQuery -= this.BCD_BITS_SIZE;
-    const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
-
-    this.byteLength = byteLength;
-    this.buff = new ArrayBuffer(this.byteLength);
-    this.u8Array = new Uint8Array(this.buff);
-  }
-
-  get byteLength() {
-    return this.byteLength;
-  }
-
-  get buffer() {
-    return this.buff;
-  }
-
-  get u8Array() {
-    return this.u8Array;
-  }
-}
-
-class NumberAdapter extends Adapter {
-  constructor(entity) {
-    if (typeof entity !== "number") {
-      throw new Error(`${typeof entity} !== 'number'`);
-    }
-
-    super();
-
-    let num = entity;
-    // entity = 10.42
-    // need to alloc 2 byte (as for 1042)
-    if (this.precision) num *= 10 ** this.precision;
-    const grades = num.toString().length;
-    // each bcd number takes 4 bits
-    let bitsQuery = grades * this.BCD_BITS_SIZE;
-    // "-4".length * 4 = 8.
-    // negative numbers will be represented as 9's complement
-    if (num < 0) bitsQuery -= this.BCD_BITS_SIZE;
-    const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
-
-    this.byteLength = byteLength;
-    this.buff = new ArrayBuffer(this.byteLength);
-    this.u8Array = new Uint8Array(this.buff);
-  }
-
-  get byteLength() {
-    return this.byteLength;
-  }
-
-  get buffer() {
-    return this.buff;
-  }
-
-  get u8Array() {
-    return this.u8Array;
-  }
-}
-
-class BCDAdapter extends Adapter {
-  constructor(entity) {
-    if (!(entity instanceof BCD)) {
-      throw new Error(`Entity is instance of BCD class`);
-    }
-
-    super();
-
-    const bcd = entity;
-
-    this.byteLength = bcd.byteLength;
-    this.buff = new ArrayBuffer(this.byteLength);
-    this.u8Array = new Uint8Array(this.buff);
-  }
-
-  get byteLength() {
-    return this.byteLength;
-  }
-
-  get buffer() {
-    return this.buff;
-  }
-
-  get u8Array() {
-    return this.u8Array;
-  }
-}
-
-class StringAdapter extends Adapter {
-  constructor(entity) {
-    if (typeof entity !== "string") {
-      throw new Error(`${typeof entity} !== 'string'`);
-    }
-
-    super();
-
-    const grades = entity.split(".").reduce((acc, n) => acc + n.length, 0);
-    // each bcd number takes 4 bits
-    let bitsQuery = grades * this.BCD_BITS_SIZE;
-    // "-4".length * 4 = 8.
-    // negative numbers will be represented as 9's complement
-    if (entity[0] === "-") bitsQuery -= this.BCD_BITS_SIZE;
-    const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
-
-    this.byteLength = byteLength;
-    this.buff = new ArrayBuffer(this.byteLength);
-    this.u8Array = new Uint8Array(this.buff);
-  }
-
-  get byteLength() {
-    return this.byteLength;
-  }
-
-  get buffer() {
-    return this.buff;
-  }
-
-  get u8Array() {
-    return this.u8Array;
-  }
-}
-
-class BCD {
   constructor(adaptedEntity, precision) {
     if (!(adaptedEntity instanceof Adapter)) {
       throw new Error(
@@ -220,26 +20,182 @@ class BCD {
     }
 
     Object.assign(this, adaptedEntity);
-    this.precision = precision;
+    if (precision) this.precision = precision;
+    this.isNegative = this.serialized[0] === "-";
+    console.log("PRECISION:", this.precision);
+    this.#initBuffer();
   }
 
-  valueOf() {}
+  #initBuffer() {
+    let insertionIndex = this.byteLength - 1;
+    let endIndex = this.serialized[0] === "-" ? 1 : 0;
+    const s = this.serialized;
+
+    for (let i = s.length; i >= endIndex; i -= 2) {
+      const startIndex = i - 2;
+      const endIndex = i;
+      const numbers = [...s.substring(startIndex, endIndex)];
+
+      let shift = 0;
+      let bcd = 0;
+      while (numbers.length) {
+        // Not pop because uint8Array visulise as littleEndian
+        const number = Number(numbers.pop()) << shift;
+        bcd |= number;
+        shift += this.BCD_BITS_SIZE;
+      }
+
+      this.u8Array[insertionIndex--] = bcd;
+    }
+
+    // If it's signed value we have to create 9's complement of it
+    if (this.isNegative) {
+      const complementedToNine = new Uint8Array(this.byteLength);
+      this.complementedToNine = complementedToNine;
+
+      for (let i = this.byteLength - 1; i >= 0; i--) {
+        const twoBcd = this.u8Array[i];
+        const ninesComplement = this.complementToNine(twoBcd, 2);
+        complementedToNine[i] = ninesComplement;
+      }
+    }
+  }
+
+  // Returns 9's complement if it's signed value
+  valueOf() {
+    return this.isNegative ? this.complementedToNine : this.u8Array;
+  }
+
+  get(idx = 0) {
+    // Define index the bcd is in
+    console.log("GRADES:", this.grades);
+  }
+
+  complementToNine(bcd, complementGrade) {
+    const mask = 0b1111;
+    let out = 0;
+
+    for (
+      let shift = 0;
+      complementGrade > 0;
+      shift += this.BCD_BITS_SIZE, bcd >>>= 4, complementGrade--
+    ) {
+      const bits = bcd & mask;
+      let substraction = BinaryCalculator.subtract(this.NINE_MASK, bits);
+      substraction <<= shift;
+      out |= substraction;
+    }
+
+    return out;
+  }
 
   get buffer() {
     return this.buff;
   }
 
-  toString() {}
+  toString() {
+    if (!this.precision) return this.serialized;
+    const out = this.#getFloat(this.precision);
+    return out;
+  }
 
-  toBigInt() {}
+  toBigInt() {
+    if (Number.isNaN(this.serialized))
+      throw new Error(`Can't get 'bigInt' type from ${this.serialized}`);
 
-  toNumber() {}
+    return BigInt(this.serialized);
+  }
 
-  floor() {}
-  rount() {}
+  toNumber() {
+    if (Number.isNaN(this.serialized))
+      throw new Error(`Can't get 'number' type from ${this.serialized}`);
+    if (!this.precision) return Number(this.serialized);
+
+    const stringifiedFloat = this.#getFloat(this.serialized);
+    return Number(stringifiedFloat);
+  }
+
+  floor() {
+    console.log(this.debugVisualiseUint8Array(this.u8Array));
+    return this.#extractIntegerPart();
+  }
+  round() {
+    console.log(this.debugVisualiseUint8Array(this.u8Array));
+    // Taking first value after .
+    const floatingPointsBytes = Math.ceil(this.precision / 2);
+    const position = this.byteLength - floatingPointsBytes;
+    const mask = this.precision % 2 === 0 ? 0b1111_0000 : 0b0000_1111;
+    const shift = this.precision % 2 === 0 ? 4 : 0;
+    const compareValue = (this.u8Array[position] & mask) >> shift;
+    console.log("CompareValue:", compareValue.toString(2).padStart(4, 0));
+    const needToIncrease = compareValue >= 5;
+    const integerPart = this.#extractIntegerPart();
+    if (needToIncrease) {
+      console.log(
+        "INGEGERPART:",
+        this.debugVisualiseUint8Array(integerPart, "integerPart:"),
+      );
+      const increasedValue = (integerPart.at(-1) & 0b0000_1111) + 1;
+      console.log(increasedValue);
+    }
+  }
   ceil() {}
-}
 
-const bcd = new BCD(new NumberAdapter(40.42));
-console.log("Value of:", bcd.valueOf()); // Также вернет ArrayBuffer
-console.log("Buffer:", bcd.buffer);
+  #getFloat(insertionIndex) {
+    if (this.isNegative) insertionIndex++;
+    const wholeString = this.serialized;
+    const boundIndex = wholeString.length - this.precision;
+    const leftPart = wholeString.substring(0, boundIndex);
+    const rightPart = wholeString.substring(boundIndex);
+    const insertionValue = ".";
+    const out = leftPart.concat(insertionValue).concat(rightPart);
+    return out;
+  }
+
+  #extractIntegerPart() {
+    if (!this.precision) return this.u8Array;
+    const floatingPointsBytes = Math.ceil(this.precision / 2);
+    const position = this.byteLength - floatingPointsBytes;
+    const endIndex = this.precision % 2 === 0 ? position : position + 1;
+    //      1    2     3  .   1       2     3
+    // [ '0001 0010', '0011 0001', '0010 0011' ]
+    // taking value elements
+    const slice = this.u8Array.slice(0, endIndex);
+    const needToMove = this.precision % 2 !== 0;
+    //               1    2       3 . 1
+    // slice be [ '0001 0010', '0011 0001' ]
+    if (needToMove) {
+      // Removing last 4 bits
+      slice[slice.length - 1] >>= 4;
+      for (let i = slice.length - 1; i > 0; i--) {
+        // taking last 4 bits in prev
+        const bitsToMove = slice[i - 1] & 0b1111;
+        slice[i] |= bitsToMove << 4;
+        slice[i - 1] >>= 4;
+      }
+    }
+
+    return slice;
+  }
+
+  debugCompareDirectedAndComplemented() {
+    for (let i = this.byteLength - 1; i >= 0; i--) {
+      const item = this.complementedToNine[i];
+      console.log("Complemented: ", item.toString(2).padStart(8, 0));
+      console.log("Bcd         : ", this.u8Array[i].toString(2).padStart(8, 0));
+      console.log("========================");
+    }
+  }
+
+  debugVisualiseUint8Array(u8a, msg) {
+    console.log(msg, u8a);
+    const a = new Array(this.buff.length);
+    for (let i = u8a.length - 1; i >= 0; i--) {
+      const bcd = u8a[i].toString(2).padStart(8, 0);
+      const l = bcd.substring(0, 4);
+      const r = bcd.substring(4);
+      a[i] = l.concat(" ").concat(r);
+    }
+    console.log(msg, a);
+  }
+}
