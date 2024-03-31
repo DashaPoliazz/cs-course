@@ -1,84 +1,99 @@
 "use strict";
 
-class BinaryCalculator {
-  static add(summand1, summand2) {
-    let result = 0;
-    const mask = 1;
-    let carry = 0;
-    let shift = 0;
-
-    while (summand1 !== 0 || summand2 !== 0 || carry !== 0) {
-      const bit1 = summand1 & mask;
-      const bit2 = summand2 & mask;
-
-      let sum = bit1 ^ bit2 ^ carry;
-
-      sum <<= shift;
-
-      carry = (bit1 & bit2) | (bit1 & carry) | (bit2 & carry);
-
-      if (bit1 & bit2) carry |= 1;
-
-      summand1 >>>= 1;
-      summand2 >>>= 1;
-      shift++;
-
-      result |= sum;
-    }
-
-    return result;
-  }
-
-  static subtract(minuend, subtrahend) {
-    const binaryMinuend = minuend.toString(2);
-    const binarySubtrahend = subtrahend.toString(2);
-
-    const binaryMaxLength = Math.max(
-      binaryMinuend.length,
-      binarySubtrahend.length,
-    );
-
-    const onesComplement = (~subtrahend + 1) & ((1 << binaryMaxLength) - 1);
-
-    const diff = minuend + onesComplement;
-
-    let binaryDiff = diff.toString(2);
-
-    binaryDiff = binaryDiff
-      .padStart(binaryMaxLength, "0")
-      .slice(-binaryMaxLength);
-
-    return parseInt(binaryDiff, 2);
-  }
-}
+const BinaryCalculator = require("./binaryCalculator.js");
+const { Adapter, NumberAdapter } = require("./adapters/adapters.js");
 
 class BCD {
-  #BCD_BIT_LEN = 4;
-  #CARRY_OVER_SIZE = 15;
-  #MAX_VALID_BCD_SIZE = 9;
-  #NORMALIZER = 0b0110;
-  #NINE_MASK = 0b1001;
-  #OVERFLOWING_FOR_TENS = 8;
+  BCD_BITS_SIZE = 4;
+  NINE_MASK = 0b1001;
 
-  constructor(number) {
-    this.number = number;
-    this.bcd = 0;
+  byteLength;
+  buff;
+  u8Array;
+  complementedToNine;
 
-    this.valueOf();
+  constructor(adaptedEntity, precision) {
+    if (!(adaptedEntity instanceof Adapter)) {
+      throw new Error(
+        "Adapted entity should be instanced from 'Adapter' class",
+      );
+    }
+
+    Object.assign(this, adaptedEntity);
+    if (precision) this.precision = precision;
+    this.isNegative = this.serialized[0] === "-";
+    console.log("PRECISION:", this.precision);
+    this.#initBuffer();
   }
 
-  complementToNine(complementGrade) {
+  #initBuffer() {
+    let insertionIndex = this.byteLength - 1;
+    let endIndex = this.serialized[0] === "-" ? 1 : 0;
+    const s = this.serialized;
+
+    for (let i = s.length; i >= endIndex; i -= 2) {
+      const startIndex = i - 2;
+      const endIndex = i;
+      const numbers = [...s.substring(startIndex, endIndex)];
+
+      let shift = 0;
+      let bcd = 0;
+      while (numbers.length) {
+        // Not pop because uint8Array visulise as littleEndian
+        const number = Number(numbers.pop()) << shift;
+        bcd |= number;
+        shift += this.BCD_BITS_SIZE;
+      }
+
+      this.u8Array[insertionIndex--] = bcd;
+    }
+
+    // If it's signed value we have to create 9's complement of it
+    if (this.isNegative) {
+      const complementedToNine = new Uint8Array(this.byteLength);
+      this.complementedToNine = complementedToNine;
+
+      for (let i = this.byteLength - 1; i >= 0; i--) {
+        const twoBcd = this.u8Array[i];
+        const ninesComplement = this.#complementToNine(twoBcd, 2);
+        complementedToNine[i] = ninesComplement;
+      }
+    }
+  }
+
+  // Returns 9's complement if it's signed value
+  valueOf() {
+    return this.isNegative ? this.complementedToNine : this.u8Array;
+  }
+
+  get(idx = 1) {
+    const isNegative = idx < 0;
+    const grades = !isNegative ? this.grades - 1 : this.grades;
+    if (Math.abs(idx) > grades)
+      idx = !isNegative ? (idx % grades) - 1 : idx % grades;
+    const isEven = idx % 2 === 0;
+    if (isNegative) idx = grades + idx;
+    const positiveMask = isEven ? 0b0000_1111 : 0b1111_0000;
+    const negativeMask = isEven ? 0b1111_0000 : 0b0000_1111;
+    const mask = !isNegative ? positiveMask : negativeMask;
+    const needToShift = mask === 0b1111_0000;
+    const cellIdx = Math.abs(this.u8Array.length - 1 - Math.floor(idx / 2));
+    const bcdPair = this.u8Array[cellIdx];
+    const out = bcdPair & mask;
+    return needToShift ? out >> this.BCD_BITS_SIZE : out;
+  }
+
+  #complementToNine(bcd, complementGrade) {
     const mask = 0b1111;
-    let bcd = this.bcd;
     let out = 0;
 
     for (
       let shift = 0;
       complementGrade > 0;
-      shift += this.#BCD_BIT_LEN, bcd >>>= 4, complementGrade--
+      shift += this.BCD_BITS_SIZE, bcd >>>= 4, complementGrade--
     ) {
       const bits = bcd & mask;
-      let substraction = BinaryCalculator.subtract(this.#NINE_MASK, bits);
+      let substraction = BinaryCalculator.subtract(this.NINE_MASK, bits);
       substraction <<= shift;
       out |= substraction;
     }
@@ -86,184 +101,143 @@ class BCD {
     return out;
   }
 
-  valueOf() {
-    let decimal = this.number;
-
-    for (let shift = 0; decimal > 0; shift += this.#BCD_BIT_LEN) {
-      const digit = decimal % 10;
-      this.bcd |= digit << shift;
-      decimal = Math.floor(decimal / 10);
-    }
-
-    return this.bcd;
+  get buffer() {
+    return this.buff;
   }
 
-  get(idx = 0) {
-    const len = Math.floor(Math.log10(Math.abs(this.number))) + 1;
-    const shift = (idx < 0 ? len + idx : idx) * this.#BCD_BIT_LEN;
-    const mask = 0b1111 << shift;
-    const out = (mask & this.bcd) >> shift;
-
+  toString() {
+    if (!this.precision) return this.serialized;
+    const out = this.#getFloat(this.precision);
     return out;
   }
 
-  add(summand1, summand2, options = { isDecimal: true }) {
-    let out = 0;
-    const mask = 0b1111;
+  toBigInt() {
+    if (Number.isNaN(this.serialized))
+      throw new Error(`Can't get 'bigInt' type from ${this.serialized}`);
 
-    let shift = 0;
-    summand1 = options.isDecimal ? new BCD(summand1).valueOf() : summand1;
-    summand2 = options.isDecimal ? new BCD(summand2).valueOf() : summand2;
+    return BigInt(this.serialized);
+  }
 
-    let carry = 0;
-    while (summand1 !== 0 || summand2 !== 0 || carry !== 0) {
-      let needToNormalize = false;
+  toNumber() {
+    if (Number.isNaN(this.serialized))
+      throw new Error(`Can't get 'number' type from ${this.serialized}`);
+    if (!this.precision) return Number(this.serialized);
 
-      const bits1 = summand1 & mask;
-      const bits2 = summand2 & mask;
+    const stringifiedFloat = this.#getFloat(this.serialized);
+    return Number(stringifiedFloat);
+  }
 
-      let sum = BinaryCalculator.add(bits1, bits2);
-      if (sum > this.#MAX_VALID_BCD_SIZE) needToNormalize = true;
+  floor() {
+    return this.#extractIntegerPart();
+  }
+  round() {
+    console.log(this.debugVisualiseUint8Array(this.u8Array));
+    // Taking first value after dot
+    const floatingPointsBytes = Math.ceil(this.precision / 2);
+    const position = this.byteLength - floatingPointsBytes;
+    const mask = this.precision % 2 === 0 ? 0b1111_0000 : 0b0000_1111;
+    const shift = this.precision % 2 === 0 ? 4 : 0;
+    const compareValue = (this.u8Array[position] & mask) >> shift;
+    console.log("CompareValue:", compareValue.toString(2).padStart(4, 0));
+    const needToIncrease = compareValue >= 5;
+    const integerPart = this.#extractIntegerPart();
+    if (needToIncrease) {
+      console.log(
+        "INGEGERPART:",
+        this.debugVisualiseUint8Array(integerPart, "integerPart:"),
+      );
+      const increasedValue = (integerPart.at(-1) & 0b0000_1111) + 1;
+      console.log(increasedValue);
+    }
+  }
+  ceil() {}
 
-      sum = BinaryCalculator.add(sum, carry);
-      carry = 0;
+  #getFloat(insertionIndex) {
+    if (this.isNegative) insertionIndex++;
+    const wholeString = this.serialized;
+    const boundIndex = wholeString.length - this.precision;
+    const leftPart = wholeString.substring(0, boundIndex);
+    const rightPart = wholeString.substring(boundIndex);
+    const insertionValue = ".";
+    const out = leftPart.concat(insertionValue).concat(rightPart);
+    return out;
+  }
 
-      if (sum > this.#CARRY_OVER_SIZE) carry = 1;
-
-      sum &= mask;
-
-      if (
-        sum > this.#MAX_VALID_BCD_SIZE ||
-        (bits1 >= this.#OVERFLOWING_FOR_TENS &&
-          bits2 >= this.#OVERFLOWING_FOR_TENS) ||
-        needToNormalize
-      ) {
-        sum = BinaryCalculator.add(sum, this.#NORMALIZER);
-
-        if (sum > this.#CARRY_OVER_SIZE) {
-          carry = 1;
-          sum &= mask;
-        }
+  #extractIntegerPart() {
+    if (!this.precision) return this.u8Array;
+    const floatingPointsBytes = Math.ceil(this.precision / 2);
+    const position = this.byteLength - floatingPointsBytes;
+    const endIndex = this.precision % 2 === 0 ? position : position + 1;
+    //      1    2     3  .   1       2     3
+    // [ '0001 0010', '0011 0001', '0010 0011' ]
+    // taking value elements
+    const slice = this.u8Array.slice(0, endIndex);
+    const needToMove = this.precision % 2 !== 0;
+    //               1    2       3 . 1
+    // slice be [ '0001 0010', '0011 0001' ]
+    if (needToMove) {
+      // Removing last 4 bits
+      slice[slice.length - 1] >>= 4;
+      for (let i = slice.length - 1; i > 0; i--) {
+        // taking last 4 bits in prev
+        const bitsToMove = slice[i - 1] & 0b1111;
+        slice[i] |= bitsToMove << 4;
+        slice[i - 1] >>= 4;
       }
-
-      const resultSum = sum << shift;
-
-      out |= resultSum;
-
-      summand1 >>= this.#BCD_BIT_LEN;
-      summand2 >>= this.#BCD_BIT_LEN;
-      shift += this.#BCD_BIT_LEN;
     }
 
-    return out;
-  }
-  substract(subtrahend) {
-    if (this.bcd === subtrahend) return 0;
-
-    const complementGrade = Math.floor(Math.log10(Math.abs(this.number))) + 1;
-    const ninesComplementOfSubtrahend = new BCD(subtrahend).complementToNine(
-      complementGrade,
-    );
-
-    const sum = this.add(this.bcd, ninesComplementOfSubtrahend, {
-      isDecimal: false,
-    });
-
-    let substractionResult = sum;
-    let significantBit = 0;
-    while (substractionResult !== 0) {
-      const currentBits = substractionResult & 0b1111;
-      significantBit = currentBits;
-      substractionResult >>= this.#BCD_BIT_LEN;
-    }
-
-    if (significantBit === 1) {
-      let mask = 1 << Math.floor(Math.log2(sum));
-      const withoutSignificantBit = sum & ~mask;
-
-      this.bcd = withoutSignificantBit;
-      const substractionResult = this.add(withoutSignificantBit, 1, {
-        isDecimal: false,
-      });
-
-      return substractionResult;
-    }
-
-    return sum;
+    return slice;
   }
 
-  multiply(multiplier) {
-    if (multiplier === 0 && this.bcd === 0) return 1;
-    if (multiplier === 0) return 0;
-    if (multiplier === 1) return this.bcd;
-
-    let product = 0;
-    while (multiplier > 0) {
-      product = new BCD().add(product, this.bcd, {
-        isDecimal: false,
-      });
-      multiplier--;
+  debugCompareDirectedAndComplemented() {
+    for (let i = this.byteLength - 1; i >= 0; i--) {
+      const item = this.complementedToNine[i];
+      console.log("Complemented: ", item.toString(2).padStart(8, 0));
+      console.log("Bcd         : ", this.u8Array[i].toString(2).padStart(8, 0));
+      console.log("========================");
     }
-
-    return product;
   }
 
-  divide(divisor) {
-    if (divisor > this.number) throw new Error("Unsupported operation :(");
-    if (divisor === 1) return this.bcd;
-    if (divisor === 0) throw new Error("Cannot divide by zero");
-
-    let count = this.number;
-    let quotient = 0;
-
-    while (count > 0) {
-      this.bcd = this.substract(divisor);
-      quotient++;
-      count -= divisor;
+  debugVisualiseUint8Array(u8a, msg) {
+    console.log(msg, u8a);
+    const a = new Array(this.buff.length);
+    for (let i = u8a.length - 1; i >= 0; i--) {
+      const bcd = u8a[i].toString(2).padStart(8, 0);
+      const l = bcd.substring(0, 4);
+      const r = bcd.substring(4);
+      a[i] = l.concat(" ").concat(r);
     }
-
-    return new BCD(quotient).valueOf();
+    console.log(msg, a);
   }
 }
 
-// Usage:
-const n1 = new BCD(65536);
+// const bcd = new BCD(new BigintAdapter(-1234567890n), 1);
+// console.log("Value of:", bcd.valueOf()); // Также вернет ArrayBuffer
+// console.log("Buffer:", bcd.buffer);
 
-console.log(n1.valueOf()); // 0b01100101010100110110 или 415030
-console.log(n1.get(0)); // 6
-console.log(n1.get(1)); // 3
-console.log(n1.get(-1)); // 6
-console.log(n1.get(-2)); // 5
-console.log("NINES COMLEMENT", n1.complementToNine(5).toString(2));
-console.log("\n");
+// console.log(bcd.toString()); // '-1234567890'
+// console.log(bcd.toBigInt());
+// console.log(bcd.toNumber()); // -1234567890
 
-const n2 = new BCD(678);
-console.log(n2.valueOf().toString(2)); // 0110 0111 1000
+// const stringifiedBCD = new BCD(new StringAdapter("10.42"));
+// console.log(stringifiedBCD.valueOf()); // Также вернет ArrayBuffer
+// console.log(stringifiedBCD.buffer);
 
-// 9999999 + 9999999 = 19 999 998
-// 1  9    9    9    9    9    9   8
-// 1 1001 1001 1001 1001 1001 1001 1000
-console.log("ADDITION", new BCD().add(9999999, 9999999).toString(2));
-// 1234567 + 7654321 = 8 8 8 8 8 8 8
-//   8   8    8    8    8    8    8
-// 1000 1000 1000 1000 1000 1000 1000
-console.log("ADDITION", new BCD().add(1234567, 7654321).toString(2)); // 1000 1000 1000 1000 1000 1000 1000
+// console.log("StringAdapter.toString():", stringifiedBCD.toString()); // '-10.42'
+// console.log("StringAdapter.toBigint():", stringifiedBCD.toBigInt());
+// console.log("StringAdapter.toNumber():", stringifiedBCD.toNumber()); // -10.42
 
-console.log("SUBTRACTION", n2.substract(67).toString(2)); // 110 0001 0001 (6 1 1)
+// const bcdBcd = new BCD(
+//   new BCDAdapter(new BCD(new BigintAdapter(-1234567890n))),
+// );
+// console.log("BCDAdapter.toString():", bcdBcd.toString()); // '-1234567890'
+// console.log("BCDAdapter.toBigint():", bcdBcd.toBigInt());
+// console.log("BCDAdapter.toNumber():", bcdBcd.toNumber()); // -1234567890
 
-const n3 = new BCD(123456789);
-// 123456789 * 2 = 246 913 578
-//  4    6    9   1    3    5    7    8
-// 100 0110 1001 0001 0011 0101 0111 1000
-// Bug -> lack of 2 (0010) in the start
-console.log("MULTIPLICATION 1", n3.multiply(2).toString(2)); // 100 0110 1001 0001 0011 0101 0111 1000
+const float = new BCD(new NumberAdapter(-1234.5));
 
-const n4 = new BCD(2);
-console.log("MULTIPLICATION 2", n4.multiply(2).toString(2)); // 100   (4)
-console.log("MULTIPLICATION 3", n4.multiply(4).toString(2)); // 1000  (8)
-console.log("MULTIPLICATION 4", n4.multiply(6).toString(2)); // 10010 (12)
-
-const n5 = new BCD(999);
-console.log("DIVISION 1", n5.divide(111).toString(2)); // 1001 (9)
-console.log("DIVISION 2", n5.divide(999).toString(2)); // 1    (1)
-console.log("DIVISION 3", n5.divide(333).toString(2)); // 11   (3)
+// console.log("Valueof:", float.valueOf());
+// console.log("toString:", float.toString());
+// console.log("Floor:", float.floor());
+console.log("Round:", float.round());
+console.log("GET:", float.get(-7));

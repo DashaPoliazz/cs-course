@@ -10,10 +10,14 @@ class StringAdapter extends Adapter {
 
     const splittedWithDot = entity.split(".");
     const isFloat = splittedWithDot.length > 1;
+    const integerAndFloatParts = isFloat
+      ? [splittedWithDot[0], splittedWithDot[1]]
+      : [splittedWithDot[0], ""];
     const precision = isFloat && splittedWithDot.at(-1).length;
-    this.precision = precision;
+    this.precision = precision === false ? 0 : precision;
     this.isFloat = isFloat;
     this.serialized = entity.split(".").join("");
+    this.integerAndFloatParts = integerAndFloatParts;
 
     const grades = entity.split(".").reduce((acc, n) => acc + n.length, 0);
     // each bcd number takes 4 bits
@@ -26,6 +30,7 @@ class StringAdapter extends Adapter {
     this.byteLength = byteLength;
     this.buff = new ArrayBuffer(this.byteLength);
     this.u8Array = new Uint8Array(this.buff);
+    this.operationResult = new Uint8Array(this.byteLength + 1);
   }
 
   get byteLength() {

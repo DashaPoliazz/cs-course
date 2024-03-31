@@ -1,11 +1,20 @@
 "use strict";
 
 const BinaryCalculator = require("./binaryCalculator.js");
-const { Adapter, NumberAdapter } = require("./adapters/adapters.js");
+const {
+  Adapter,
+  NumberAdapter,
+  BigintAdapter,
+  StringAdapter,
+} = require("./adapters/adapters.js");
 
 class BCD {
   BCD_BITS_SIZE = 4;
   NINE_MASK = 0b1001;
+  LAST_VALID_BCD = 0b1001;
+  NORMALIZE_VALUE = 0b0110;
+  BIGGEST_FOUR_BIT_VALUE = 0b1111;
+  OVERFLOWING_FOR_TENS = 0b1000;
 
   byteLength;
   buff;
@@ -69,18 +78,14 @@ class BCD {
   get(idx = 1) {
     const isNegative = idx < 0;
     const grades = !isNegative ? this.grades - 1 : this.grades;
-    // Rounding index to avoid 'out of bounds' ub.
     if (Math.abs(idx) > grades)
       idx = !isNegative ? (idx % grades) - 1 : idx % grades;
     const isEven = idx % 2 === 0;
-    // for positive
     if (isNegative) idx = grades + idx;
     const positiveMask = isEven ? 0b0000_1111 : 0b1111_0000;
     const negativeMask = isEven ? 0b1111_0000 : 0b0000_1111;
     const mask = !isNegative ? positiveMask : negativeMask;
     const needToShift = mask === 0b1111_0000;
-    // Define index the bcd is in
-    // this.grades / 0 !
     const cellIdx = Math.abs(this.u8Array.length - 1 - Math.floor(idx / 2));
     const bcdPair = this.u8Array[cellIdx];
     const out = bcdPair & mask;
@@ -102,6 +107,84 @@ class BCD {
       out |= substraction;
     }
 
+    return out;
+  }
+
+  // summand should be typeof 'number'
+  // summand could be float number
+  // summand is a instance of Adapter
+  add(summand) {
+    if (!(summand instanceof Adapter))
+      throw new Error(
+        "Adapted entity should be instanced from 'Adapter' class",
+      );
+
+    const [s1, s2] = this.#alignedSummands(this, summand);
+    let result = "";
+
+    let i = s1.length - 1;
+    let carry = 0;
+
+    while (i >= 0 || carry) {
+      const n1 = Number(s1[i]);
+      const n2 = Number(s2[i]);
+
+      console.log(`n1 = ${n1} n2 = ${n2}`);
+      let sum = BinaryCalculator.add(n1, n2);
+      console.log("sum:", sum.toString(2));
+      console.log("carry:", carry);
+      if (carry) {
+        sum = BinaryCalculator.add(sum, 1);
+        console.log("after carry block:", sum.toString());
+        carry = 0;
+      }
+      const overflow = (sum & 0b10000) >> this.BCD_BITS_SIZE;
+      console.log("overflow:", overflow);
+      // Taking last 4 bits
+      sum &= 0b1111;
+      console.log("take 4 bits:", sum.toString(2));
+      const needToNormalize = sum > this.LAST_VALID_BCD;
+      const sixteenBound = n1 >= 0b1000 && n2 >= 0b1000;
+      if (needToNormalize || sixteenBound) {
+        console.log("need to normalize block");
+        sum = BinaryCalculator.add(sum, this.NORMALIZE_VALUE);
+        console.log("sum after normalizastion:", sum);
+        carry = ((sum & 0b10000) >> this.BCD_BITS_SIZE) | overflow;
+        sum &= 0b1111;
+        console.log("carry after normalization:", carry);
+      }
+
+      carry |= overflow;
+      result = sum.toString().concat(result);
+
+      i--;
+    }
+
+    return result;
+  }
+
+  #alignedSummands(s1, s2) {
+    // s1 = "123.456"
+    // s2 = "1.23456"
+    // normalizedS1 = "123.45600"
+    // normalizedS2 = "001.23456"
+    let [intPartS1, floatPartS1] = s1.integerAndFloatParts;
+    let [intPartS2, floatPartS2] = s2.integerAndFloatParts;
+    intPartS1 = intPartS1[0] === "-" ? intPartS1.substring(1) : intPartS1;
+    intPartS2 = intPartS2[0] === "-" ? intPartS2.substring(1) : intPartS2;
+    const maxIntPart = Math.max(intPartS1.length, intPartS2.length);
+    const maxFloatPart = Math.max(floatPartS1.length, floatPartS2.length);
+    const alignedS1 = intPartS1
+      .padStart(maxIntPart, 0)
+      .concat(floatPartS1.padEnd(maxFloatPart, 0));
+    const alignedS2 = intPartS2
+      .padStart(maxIntPart, 0)
+      .concat(floatPartS2.padEnd(maxFloatPart, 0));
+    const out = [alignedS1, alignedS2];
+    console.log("===ALIGNED PARTS===");
+    console.log(alignedS1);
+    console.log(alignedS2);
+    console.log("===ALIGNED PARTS===");
     return out;
   }
 
@@ -243,5 +326,52 @@ const float = new BCD(new NumberAdapter(-1234.5));
 // console.log("Valueof:", float.valueOf());
 // console.log("toString:", float.toString());
 // console.log("Floor:", float.floor());
-console.log("Round:", float.round());
-console.log("GET:", float.get(-7));
+// console.log("Round:", float.round());
+// console.log("GET:", float.get(-7));
+
+console.log("Add:", float.add(new NumberAdapter(3)));
+
+// {
+// const bcd = new BCD(new BigintAdapter(123n));
+// console.log("BigintAdapter:", bcd.initialEntity);
+// }
+
+{
+  // Integer and float parts:
+  const bcd1 = new BCD(new BigintAdapter(12345n));
+  console.log("BigInt and float parts:", bcd1.integerAndFloatParts);
+
+  const bcd2 = new BCD(new NumberAdapter(12345));
+  console.log("Number integer and float parts:", bcd2.integerAndFloatParts);
+
+  const bcd3 = new BCD(new NumberAdapter(-12345));
+  console.log(
+    "Negative number integer and float parts:",
+    bcd3.integerAndFloatParts,
+  );
+
+  const bcd4 = new BCD(new NumberAdapter(12345.6789));
+  console.log("Float number and float parts:", bcd4.integerAndFloatParts);
+
+  const bcd5 = new BCD(new StringAdapter("12345"));
+  console.log("String and float parts:", bcd5.integerAndFloatParts);
+
+  const bcd6 = new BCD(new StringAdapter("12345.6789"));
+  console.log("String and float parts:", bcd6.integerAndFloatParts);
+}
+
+{
+  // Add
+  // Numbers:
+  const bcd1 = new BCD(new NumberAdapter(123456789));
+  console.log("Number + Number", bcd1.add(new NumberAdapter(987654321)));
+
+  const bcd2 = new BCD(new NumberAdapter(2));
+  console.log("Number + Number", bcd2.add(new NumberAdapter(3)));
+
+  const bcd3 = new BCD(new NumberAdapter(9999_9999));
+  console.log("Number + Number", bcd3.add(new NumberAdapter(9999_9999)));
+
+  const bcd4 = new BCD(new NumberAdapter(123.9987));
+  console.log("Number + Number", bcd4.add(new NumberAdapter(99.9)));
+}

@@ -10,12 +10,14 @@ class BCDAdapter extends Adapter {
     // Maybe error!
     this.serialized = entity.serialized;
     this.initialEntity = entity.initialEntity;
+    this.integerAndFloatParts = entity.integerAndFloatParts;
 
     const bcd = entity;
 
     this.byteLength = bcd.byteLength;
     this.buff = new ArrayBuffer(this.byteLength);
     this.u8Array = new Uint8Array(this.buff);
+    this.operationResult = entity.operationResult;
   }
 
   get byteLength() {

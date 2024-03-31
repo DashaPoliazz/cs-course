@@ -13,6 +13,7 @@ class BigintAdapter extends Adapter {
     }
 
     this.serialized = entity.toString();
+    this.integerAndFloatParts = [this.serialized, ""];
 
     let num = entity;
     // entity = 10.42
@@ -30,6 +31,7 @@ class BigintAdapter extends Adapter {
     this.byteLength = byteLength;
     this.buff = new ArrayBuffer(this.byteLength);
     this.u8Array = new Uint8Array(this.buff);
+    this.operationResult = new Uint8Array(this.byteLength + 1);
   }
 
   get byteLength() {

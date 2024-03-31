@@ -6,12 +6,14 @@ class Adapter {
   buff;
   u8Array;
   isFloat = false;
-  precision = 0;
+  precision;
   grades;
+  operationResult;
 
   constructor(entity) {
-    this.initialEntity = entity;
+    this.initialEntity = entity.toString();
     this.serialized = entity;
+    this.precision = 0;
   }
 
   get byteLength() {

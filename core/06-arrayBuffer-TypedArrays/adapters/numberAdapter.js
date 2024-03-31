@@ -10,14 +10,18 @@ class NumberAdapter extends Adapter {
     const stringifiedEntity = entity.toString();
     const splittedWithDot = stringifiedEntity.split(".");
     const isFloat = splittedWithDot.length > 1;
+    const integerAndFloatParts = isFloat
+      ? [splittedWithDot[0], splittedWithDot[1]]
+      : [splittedWithDot[0], ""];
     const precision = isFloat && splittedWithDot.at(-1).length;
-    this.precision = precision;
+    this.precision = precision === false ? 0 : precision;
     this.isFloat = isFloat;
     this.serialized = splittedWithDot.join("");
     this.grades =
       this.serialized[0] === "-"
         ? this.serialized.length - 1
         : this.serialized.length;
+    this.integerAndFloatParts = integerAndFloatParts;
 
     let num = entity;
     // entity = 10.42
@@ -34,6 +38,7 @@ class NumberAdapter extends Adapter {
     this.byteLength = byteLength;
     this.buff = new ArrayBuffer(this.byteLength);
     this.u8Array = new Uint8Array(this.buff);
+    this.operationResult = new Uint8Array(this.byteLength + 1);
   }
 
   get byteLength() {
