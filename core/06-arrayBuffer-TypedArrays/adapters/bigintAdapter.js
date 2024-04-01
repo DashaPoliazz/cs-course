@@ -19,19 +19,27 @@ class BigintAdapter extends Adapter {
     // entity = 10.42
     // need to alloc 2 byte (as for 1042)
     const stringifiedBigInt = num.toString();
-    const grades = stringifiedBigInt.length;
+    const grades =
+      stringifiedBigInt[0] === "-"
+        ? stringifiedBigInt.length - 1
+        : stringifiedBigInt.length;
     this.grades = grades;
     // each bcd number takes 4 bits
     let bitsQuery = grades * this.BCD_BITS_SIZE;
     // "-4".length * 4 = 8.
     // negative numbers will be represented as 9's complement
-    if (num < 0) bitsQuery -= this.BCD_BITS_SIZE;
+    if (num < 0n) {
+      bitsQuery -= this.BCD_BITS_SIZE;
+      this.isSigned = true;
+    }
+
     const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
 
     this.byteLength = byteLength;
     this.buff = new ArrayBuffer(this.byteLength);
     this.u8Array = new Uint8Array(this.buff);
     this.operationResult = new Uint8Array(this.byteLength + 1);
+    this.grades = grades;
   }
 
   get byteLength() {

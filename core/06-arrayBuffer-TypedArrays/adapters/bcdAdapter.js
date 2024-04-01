@@ -1,3 +1,4 @@
+const BCD = require("../bcdEncoder.js");
 const Adapter = require("./mainAdapter.js");
 
 class BCDAdapter extends Adapter {
@@ -11,6 +12,7 @@ class BCDAdapter extends Adapter {
     this.serialized = entity.serialized;
     this.initialEntity = entity.initialEntity;
     this.integerAndFloatParts = entity.integerAndFloatParts;
+    this.isSigned = entity.isSigned;
 
     const bcd = entity;
 

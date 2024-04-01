@@ -18,19 +18,23 @@ class StringAdapter extends Adapter {
     this.isFloat = isFloat;
     this.serialized = entity.split(".").join("");
     this.integerAndFloatParts = integerAndFloatParts;
+    this.isSigned = entity[0] === "-";
 
-    const grades = entity.split(".").reduce((acc, n) => acc + n.length, 0);
+    const grades = this.isSigned
+      ? splittedWithDot.join("").length - 1
+      : splittedWithDot.join("").length;
     // each bcd number takes 4 bits
     let bitsQuery = grades * this.BCD_BITS_SIZE;
     // "-4".length * 4 = 8.
     // negative numbers will be represented as 9's complement
-    if (entity[0] === "-") bitsQuery -= this.BCD_BITS_SIZE;
+    if (this.isSigned) bitsQuery -= this.BCD_BITS_SIZE;
     const byteLength = Math.ceil(bitsQuery / this.BITS_PER_BYTE);
 
     this.byteLength = byteLength;
     this.buff = new ArrayBuffer(this.byteLength);
     this.u8Array = new Uint8Array(this.buff);
     this.operationResult = new Uint8Array(this.byteLength + 1);
+    this.grades = grades;
   }
 
   get byteLength() {

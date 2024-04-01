@@ -6,6 +6,7 @@ class Adapter {
   buff;
   u8Array;
   isFloat = false;
+  isSigned = false;
   precision;
   grades;
   operationResult;

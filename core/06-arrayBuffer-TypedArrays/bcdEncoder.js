@@ -6,6 +6,7 @@ const {
   NumberAdapter,
   BigintAdapter,
   StringAdapter,
+  BCDAdapter,
 } = require("./adapters/adapters.js");
 
 class BCD {
@@ -29,9 +30,8 @@ class BCD {
     }
 
     Object.assign(this, adaptedEntity);
+    console.log(adaptedEntity.initialEntity);
     if (precision) this.precision = precision;
-    this.isNegative = this.serialized[0] === "-";
-    console.log("PRECISION:", this.precision);
     this.#initBuffer();
   }
 
@@ -58,21 +58,37 @@ class BCD {
     }
 
     // If it's signed value we have to create 9's complement of it
-    if (this.isNegative) {
+    if (this.isSigned) {
       const complementedToNine = new Uint8Array(this.byteLength);
       this.complementedToNine = complementedToNine;
 
       for (let i = this.byteLength - 1; i >= 0; i--) {
         const twoBcd = this.u8Array[i];
         const ninesComplement = this.#complementToNine(twoBcd, 2);
+
         complementedToNine[i] = ninesComplement;
       }
+
+      // getting serialized nines complement of value
+      let serializedComplementToNine = "";
+      for (
+        let i = 0, j = this.serialized.length - 1;
+        i < this.grades;
+        i++, j--
+      ) {
+        const n = Number(this.serialized[j]);
+        const ninesComplement = this.#complementToNine(n, 1);
+        serializedComplementToNine = String(ninesComplement).concat(
+          serializedComplementToNine,
+        );
+      }
+      this.serializedComplementToNine = serializedComplementToNine;
     }
   }
 
   // Returns 9's complement if it's signed value
   valueOf() {
-    return this.isNegative ? this.complementedToNine : this.u8Array;
+    return this.isSigned ? this.complementedToNine : this.u8Array;
   }
 
   get(idx = 1) {
@@ -113,13 +129,20 @@ class BCD {
   // summand should be typeof 'number'
   // summand could be float number
   // summand is a instance of Adapter
-  add(summand) {
+  add(
+    summand,
+    options = {
+      align: true,
+    },
+  ) {
     if (!(summand instanceof Adapter))
       throw new Error(
         "Adapted entity should be instanced from 'Adapter' class",
       );
 
-    const [s1, s2] = this.#alignedSummands(this, summand);
+    const [s1, s2] = options.align
+      ? this.#alignedSummands(this, summand, 0)
+      : [this.serialized, summand.serialized];
     let result = "";
 
     let i = s1.length - 1;
@@ -129,29 +152,29 @@ class BCD {
       const n1 = Number(s1[i]);
       const n2 = Number(s2[i]);
 
-      console.log(`n1 = ${n1} n2 = ${n2}`);
+      // console.log(`n1 = ${n1} n2 = ${n2}`);
       let sum = BinaryCalculator.add(n1, n2);
-      console.log("sum:", sum.toString(2));
-      console.log("carry:", carry);
+      // console.log("sum:", sum.toString(2));
+      // console.log("carry:", carry);
       if (carry) {
         sum = BinaryCalculator.add(sum, 1);
-        console.log("after carry block:", sum.toString());
+        // console.log("after carry block:", sum.toString());
         carry = 0;
       }
       const overflow = (sum & 0b10000) >> this.BCD_BITS_SIZE;
-      console.log("overflow:", overflow);
+      // console.log("overflow:", overflow);
       // Taking last 4 bits
       sum &= 0b1111;
-      console.log("take 4 bits:", sum.toString(2));
+      // console.log("take 4 bits:", sum.toString(2));
       const needToNormalize = sum > this.LAST_VALID_BCD;
       const sixteenBound = n1 >= 0b1000 && n2 >= 0b1000;
       if (needToNormalize || sixteenBound) {
-        console.log("need to normalize block");
+        // console.log("need to normalize block");
         sum = BinaryCalculator.add(sum, this.NORMALIZE_VALUE);
-        console.log("sum after normalizastion:", sum);
+        // console.log("sum after normalizastion:", sum);
         carry = ((sum & 0b10000) >> this.BCD_BITS_SIZE) | overflow;
         sum &= 0b1111;
-        console.log("carry after normalization:", carry);
+        // console.log("carry after normalization:", carry);
       }
 
       carry |= overflow;
@@ -160,28 +183,94 @@ class BCD {
       i--;
     }
 
-    return result;
+    const [_, floatPart1] = this.integerAndFloatParts;
+    const [__, floatPart2] = summand.integerAndFloatParts;
+    const maxFloatPart = Math.max(floatPart1.length, floatPart2.length);
+
+    return new BCD(new StringAdapter(result), maxFloatPart);
   }
 
-  #alignedSummands(s1, s2) {
+  // TODO;
+  // [] Carry should fly to the start
+  subtract(minuend) {
+    if (!(minuend instanceof Adapter))
+      throw new Error(
+        "Adapted entity should be instanced from 'Adapter' class",
+      );
+    if (minuend.isSigned) {
+      // cutting of "-"
+      const positiveNumber = minuend.serialized.substring(1);
+      const out = this.add(new StringAdapter(positiveNumber));
+      return out;
+    }
+    // TODO: support subtracting greater value from smaller value
+    const adaptedMinuend = new BCD(
+      new StringAdapter("-".concat(minuend.initialEntity)),
+    );
+
+    if (this.grades === adaptedMinuend.grades) {
+    }
+
+    const [alignedS1, alignedS2] = this.#alignedSummands(
+      this,
+      adaptedMinuend,
+      0,
+    );
+    const precision = Math.max(
+      this.integerAndFloatParts[1],
+      minuend.integerAndFloatParts[1],
+    );
+    // taking nines complement of aligned serialized minuend
+    const ninesComplementOfMinuend = new BCD(
+      new StringAdapter("-".concat(alignedS2)),
+      precision,
+    ).serializedComplementToNine;
+
+    // console.log(
+    // `NINES COMPLEMENT OF ${adaptedMinuend.initialEntity} is ${ninesComplementOfMinuend}`,
+    // );
+    // 10.13 - 7.12 = 10.13 + 9's complement of 7.12,
+    // where 9's complement of 7.12 is 9287
+    const out = this.add(new StringAdapter(ninesComplementOfMinuend), {
+      align: false,
+    });
+    // console.log("OUT:", out);
+    // we have to pull carry from to the start
+    if (out.grades > Math.max(this.grades, adaptedMinuend.grades)) {
+      const withoutLeadingOne = out.serialized.substring(1);
+      const sum = new BCD(new StringAdapter(withoutLeadingOne)).add(
+        new NumberAdapter(1),
+      );
+      return sum;
+    }
+
+    return out;
+  }
+
+  #alignedSummands(s1, s2, fillString) {
     // s1 = "123.456"
     // s2 = "1.23456"
     // normalizedS1 = "123.45600"
     // normalizedS2 = "001.23456"
     let [intPartS1, floatPartS1] = s1.integerAndFloatParts;
     let [intPartS2, floatPartS2] = s2.integerAndFloatParts;
+    console.log(
+      `intpart1: ${intPartS1}, intpart2: ${intPartS2}, floatpart1: ${floatPartS1} floatpart2: ${floatPartS2}`,
+    );
     intPartS1 = intPartS1[0] === "-" ? intPartS1.substring(1) : intPartS1;
     intPartS2 = intPartS2[0] === "-" ? intPartS2.substring(1) : intPartS2;
     const maxIntPart = Math.max(intPartS1.length, intPartS2.length);
     const maxFloatPart = Math.max(floatPartS1.length, floatPartS2.length);
     const alignedS1 = intPartS1
       .padStart(maxIntPart, 0)
-      .concat(floatPartS1.padEnd(maxFloatPart, 0));
+      .concat(floatPartS1.padEnd(maxFloatPart, fillString));
     const alignedS2 = intPartS2
       .padStart(maxIntPart, 0)
-      .concat(floatPartS2.padEnd(maxFloatPart, 0));
+      .concat(floatPartS2.padEnd(maxFloatPart, fillString));
     const out = [alignedS1, alignedS2];
     console.log("===ALIGNED PARTS===");
+    console.log(`intpart1: ${intPartS1} floatpart1: ${floatPartS1}`);
+    console.log(`intpart2: ${intPartS2} floatpart2: ${floatPartS2}`);
     console.log(alignedS1);
     console.log(alignedS2);
     console.log("===ALIGNED PARTS===");
@@ -239,8 +328,17 @@ class BCD {
   }
   ceil() {}
 
+  // fold() {
+  //   if (!this.precision) return this.initialEntity;
+  //   const separateIndex = this.serialized.length - this.precision;
+  //   const left = this.serialized.substring(0, separateIndex);
+  //   const right = this.serialized.substring(separateIndex);
+  //   console.log(`LEFT=${left} RIGHT = ${right}`);
+  //   return Number([left, right].join("."));
+  // }
+
   #getFloat(insertionIndex) {
-    if (this.isNegative) insertionIndex++;
+    if (this.isSigned) insertionIndex++;
     const wholeString = this.serialized;
     const boundIndex = wholeString.length - this.precision;
     const leftPart = wholeString.substring(0, boundIndex);
@@ -321,7 +419,7 @@ class BCD {
 // console.log("BCDAdapter.toBigint():", bcdBcd.toBigInt());
 // console.log("BCDAdapter.toNumber():", bcdBcd.toNumber()); // -1234567890
 
-const float = new BCD(new NumberAdapter(-1234.5));
+// const float = new BCD(new NumberAdapter(-1234.5));
 
 // console.log("Valueof:", float.valueOf());
 // console.log("toString:", float.toString());
@@ -329,49 +427,94 @@ const float = new BCD(new NumberAdapter(-1234.5));
 // console.log("Round:", float.round());
 // console.log("GET:", float.get(-7));
 
-console.log("Add:", float.add(new NumberAdapter(3)));
+// console.log("Add:", float.add(new NumberAdapter(3)));
 
 // {
 // const bcd = new BCD(new BigintAdapter(123n));
 // console.log("BigintAdapter:", bcd.initialEntity);
 // }
 
+// {
+//   // Integer and float parts:
+//   const bcd1 = new BCD(new BigintAdapter(12345n));
+//   console.log("BigInt and float parts:", bcd1.integerAndFloatParts);
+
+//   const bcd2 = new BCD(new NumberAdapter(12345));
+//   console.log("Number integer and float parts:", bcd2.integerAndFloatParts);
+
+//   const bcd3 = new BCD(new NumberAdapter(-12345));
+//   console.log(
+//     "Negative number integer and float parts:",
+//     bcd3.integerAndFloatParts,
+//   );
+
+//   const bcd4 = new BCD(new NumberAdapter(12345.6789));
+//   console.log("Float number and float parts:", bcd4.integerAndFloatParts);
+
+//   const bcd5 = new BCD(new StringAdapter("12345"));
+//   console.log("String and float parts:", bcd5.integerAndFloatParts);
+
+//   const bcd6 = new BCD(new StringAdapter("12345.6789"));
+//   console.log("String and float parts:", bcd6.integerAndFloatParts);
+// }
+
+// {
+//   // Add
+//   // Numbers:
+//   const bcd1 = new BCD(new NumberAdapter(123456789));
+//   console.log("Number + Number", bcd1.add(new NumberAdapter(987654321)));
+
+//   const bcd2 = new BCD(new NumberAdapter(2));
+//   console.log("Number + Number", bcd2.add(new NumberAdapter(3)));
+
+//   const bcd3 = new BCD(new NumberAdapter(9999_9999));
+//   console.log("Number + Number", bcd3.add(new NumberAdapter(9999_9999)));
+
+//   const bcd4 = new BCD(new NumberAdapter(123.9987));
+//   console.log("Number + Number", bcd4.add(new NumberAdapter(99.9)));
+
+//   const bcd5 = new BCD(new NumberAdapter(0.9));
+//   console.log("Number + Number", bcd5.add(new NumberAdapter(0.9)));
+
+//   const bcd6 = new BCD(new NumberAdapter(83));
+//   console.log("Number + Number", bcd6.add(new NumberAdapter(96)));
+
+//   const bcd7 = new BCD(new NumberAdapter(8.2));
+//   console.log("Number + Number 7", bcd7.add(new NumberAdapter(4.08)));
+// }
+
 {
-  // Integer and float parts:
-  const bcd1 = new BCD(new BigintAdapter(12345n));
-  console.log("BigInt and float parts:", bcd1.integerAndFloatParts);
+  // Subtract
+  // const bcd1 = new BCD(new NumberAdapter(8.3216));
+  // console.log(
+  //   "Substracting of signed value is adding",
+  //   bcd1.subtract(new NumberAdapter(-1)),
+  // );
+  const bcd2 = new BCD(new NumberAdapter(83));
+  console.log("Normal subtracting1", bcd2.subtract(new NumberAdapter(3)));
 
-  const bcd2 = new BCD(new NumberAdapter(12345));
-  console.log("Number integer and float parts:", bcd2.integerAndFloatParts);
+  const bcd3 = new BCD(new NumberAdapter(10.13));
+  console.log("Normal subtracting2", bcd3.subtract(new NumberAdapter(7.12)));
 
-  const bcd3 = new BCD(new NumberAdapter(-12345));
-  console.log(
-    "Negative number integer and float parts:",
-    bcd3.integerAndFloatParts,
-  );
-
-  const bcd4 = new BCD(new NumberAdapter(12345.6789));
-  console.log("Float number and float parts:", bcd4.integerAndFloatParts);
-
-  const bcd5 = new BCD(new StringAdapter("12345"));
-  console.log("String and float parts:", bcd5.integerAndFloatParts);
-
-  const bcd6 = new BCD(new StringAdapter("12345.6789"));
-  console.log("String and float parts:", bcd6.integerAndFloatParts);
+  const bcd4 = new BCD(new NumberAdapter(8.2));
+  console.log("Normal subtracting3", bcd4.subtract(new NumberAdapter(5.91)));
 }
 
 {
-  // Add
-  // Numbers:
-  const bcd1 = new BCD(new NumberAdapter(123456789));
-  console.log("Number + Number", bcd1.add(new NumberAdapter(987654321)));
-
-  const bcd2 = new BCD(new NumberAdapter(2));
-  console.log("Number + Number", bcd2.add(new NumberAdapter(3)));
-
-  const bcd3 = new BCD(new NumberAdapter(9999_9999));
-  console.log("Number + Number", bcd3.add(new NumberAdapter(9999_9999)));
-
-  const bcd4 = new BCD(new NumberAdapter(123.9987));
-  console.log("Number + Number", bcd4.add(new NumberAdapter(99.9)));
+  // Grades:
+  // const bcd = new BCD(new BigintAdapter(-323n));
+  // console.log("GRADES:", bcd.grades);
+  // const bcd2 = new BCD(new NumberAdapter(-3.244));
+  // console.log("GRADES:", bcd2.grades);
 }
+
+// {
+//   // 9's complement
+//   const bcd1 = new BCD(new StringAdapter("-5.90"));
+//   console.log("Nines complement 1:", bcd1.serializedComplementToNine);
+
+//   const bcd2 = new BCD(new StringAdapter("-07.12"));
+//   console.log("Nines complement 2:", bcd2.serializedComplementToNine);
+// }
+
+module.exports = BCD;

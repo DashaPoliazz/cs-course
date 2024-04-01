@@ -1,0 +1,89 @@
+# ДЗ к лекции База#8
+
+## Реализовать универсальный класс вектора для всех типизированных массивов
+
+```js
+const vec = new Vector(Int32Array, { capacity: 4 });
+
+vec.push(1); // Возвращает длину - 1
+vec.push(2); // 2
+vec.push(3); // 3
+vec.push(4); // 4
+vec.push(5); // 5 Увеличение буфера
+
+console.log(vec.capacity); // 8
+console.log(vec.length); // 5
+
+vec.pop(); // Удаляет с конца, возвращает удаленный элемент - 5
+
+console.log(vec.capacity); // 8
+
+vec.shrinkToFit(); // Новая емкость 4
+console.log(vec.capacity); // 4
+
+console.log(vec.buffer); // Ссылка на ArrayBuffer
+```
+
+## Реализовать итератор values для вектора с учетом того, что буфер может вырасти
+
+```js
+const vec = new Vector(Int32Array, { capacity: 1 });
+
+const i = vec.values();
+
+vec.push(1);
+vec.push(2);
+vec.push(3);
+
+console.log(i.next()); // {done: false, value: 1}
+console.log(i.next()); // {done: false, value: 2}
+console.log(i.next()); // {done: false, value: 3}
+console.log(i.next()); // {done: true, value: undefined}
+```
+
+## Реализовать универсальный класс для N мерной матрицы для всех типизированных массивов
+
+```js
+const matrix2n2n2 = new Matrix(Int32Array, 2, 2, 2);
+
+matrix3n4n5.set(0, 0, 0, 1);
+matrix3n4n5.set(0, 1, 0, 2);
+matrix3n4n5.set(0, 0, 1, 3);
+matrix3n4n5.set(0, 1, 1, 4);
+
+matrix3n4n5.set(1, 0, 0, 5);
+matrix3n4n5.set(1, 1, 0, 6);
+matrix3n4n5.set(1, 0, 1, 7);
+matrix3n4n5.set(1, 1, 1, 8);
+
+matrix3n4n5.get(0, 0, 0); // 1
+matrix3n4n5.get(0, 1, 0); // 2
+matrix3n4n5.get(0, 0, 1); // 3
+matrix3n4n5.get(0, 1, 1); // 4
+
+matrix3n4n5.get(1, 0, 0); // 5
+matrix3n4n5.get(1, 1, 0); // 6
+matrix3n4n5.get(1, 0, 1); // 7
+matrix3n4n5.get(1, 1, 1); // 8
+
+console.log(vec.buffer); // Ссылка на ArrayBuffer
+```
+
+## Реализовать итератор values для матрицы
+
+```js
+const matrix2n2n2 = new Matrix(Int32Array, 2, 2, 2);
+
+matrix3n4n5.set(0, 0, 0, 1);
+matrix3n4n5.set(0, 1, 0, 2);
+matrix3n4n5.set(0, 0, 1, 3);
+matrix3n4n5.set(0, 1, 1, 4);
+
+matrix3n4n5.set(1, 0, 0, 5);
+matrix3n4n5.set(1, 1, 0, 6);
+matrix3n4n5.set(1, 0, 1, 7);
+matrix3n4n5.set(1, 1, 1, 8);
+
+// [1, 2, 3, 4, 5, 6, 7, 8, 9]
+console.log(Array.from(matrix2n2n2.values()));
+```
