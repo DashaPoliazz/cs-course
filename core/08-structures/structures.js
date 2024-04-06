@@ -1,5 +1,59 @@
-class Struct {
-  constructor(scheme) {}
+const allowedSizes = {
+  8: 8,
+  16: 16,
+  32: 32,
+  64: 64,
+};
+
+const isArrayTypedArray = (entity) => {
+  return (
+    entity instanceof Int8Array ||
+    entity instanceof Uint8Array ||
+    entity instanceof Uint8ClampedArray ||
+    entity instanceof Int16Array ||
+    entity instanceof Uint16Array ||
+    entity instanceof Int32Array ||
+    entity instanceof Uint32Array ||
+    entity instanceof Float32Array ||
+    entity instanceof Float64Array ||
+    entity instanceof BigInt64Array ||
+    entity instanceof BigUint64Array
+  );
+};
+
+const getGetSetForDataView = (typedArray, dataView) => {
+  if (!typedArray) throw new Error("Data view is not initialized.");
+  switch (typedArray) {
+    case Int8Array:
+      return [dataView.getInt8, dataView.setInt8];
+    case Uint8Array:
+      return [dataView.getUint8, dataView.setUint8];
+    case Uint8ClampedArray:
+      return [dataView.getUint8, dataView.setUint8];
+    case Int16Array:
+      return [dataView.getInt16, dataView.setInt16];
+    case Uint16Array:
+      return [dataView.getUint16, dataView.setUint16];
+    case Int32Array:
+      return [dataView.getInt32, dataView.setInt32];
+    case Uint32Array:
+      return [dataView.getUint32, dataView.setUint32];
+    case Float32Array:
+      return [dataView.getFloat32, dataView.setFloat32];
+    case Float64Array:
+      return [dataView.getFloat64, dataView.setFloat64];
+    case BigInt64Array:
+      return [dataView.getBigInt64, dataView.setBigInt64];
+    case BigUint64Array:
+      return [dataView.getBigUint64, dataView.setBigUint64];
+    default:
+      throw new Error("Unsupported TypedArray type");
+  }
+};
+
+class AbstractDataType {
+  byteLength;
+  markup;
 
   static get U8() {
     return [8, Uint8Array];
@@ -37,17 +91,238 @@ class Struct {
     return [64, Float64Array];
   }
 
-  static get F64() {
-    return 64;
-  }
   static String(encoding) {
     switch (encoding) {
       case "ASCII":
-        8;
+        return Struct.U8;
       default:
         throw new Error(`Unsupported string encoding ${encoding}`);
     }
   }
+
+  createMarkup() {
+    const markup = {};
+    const shape = this.shape;
+    let byteLength = 0;
+    let offset = 0;
+
+    const buildMarkup = (shape, keys = []) => {
+      for (const [k, v] of Object.entries(shape)) {
+        const key = [...keys, k];
+        const joinedKey = key.join("-");
+
+        const isShape = !Array.isArray(v);
+        if (isShape) {
+          buildMarkup(v, key);
+          continue;
+        }
+
+        markup[joinedKey] = {
+          byteOffset: offset,
+          TypedArray: v[1],
+        };
+
+        offset += v[0] / 8;
+
+        byteLength = Math.max(byteLength, offset);
+      }
+    };
+
+    buildMarkup(shape);
+
+    this.byteLength = byteLength;
+    this.markup = markup;
+  }
+
+  initGetSet() {
+    Object.entries(this.markup).forEach(([k, v]) => {
+      const { TypedArray } = v;
+      const getset = getGetSetForDataView(TypedArray, this.dataView);
+      const contextifiedGetSet = getset.map((f) => f.bind(this.dataView));
+
+      this.markup[k] = {
+        byteOffset: v.byteOffset,
+        getset: contextifiedGetSet,
+      };
+    });
+  }
+
+  create(...values) {
+    this.lazyInit();
+
+    const plainValues = ((arr) => {
+      const getPlainValues = (arr) => {
+        return arr.flatMap((item) => {
+          if (Array.isArray(item)) {
+            return getPlainValues(item);
+          } else if (typeof item === "object" && item !== null) {
+            return getPlainValues(Object.values(item));
+          } else {
+            return item;
+          }
+        });
+      };
+
+      return getPlainValues(arr);
+    })(values);
+
+    const availableSlots = Object.entries(this.markup);
+    const valuesToInsert = plainValues.length;
+    if (availableSlots.length !== valuesToInsert)
+      throw new Error("Not all values entered");
+
+    let i = 0;
+    for (const [_, v] of availableSlots) {
+      const { byteOffset, getset } = v;
+      const [get, set] = getset;
+      const valueToInsert = plainValues[i];
+      set(byteOffset, valueToInsert);
+      i++;
+    }
+  }
+
+  buildShape() {
+    throw new Error("not implemented");
+  }
+
+  static createScheme() {
+    throw new Error("not implemented");
+  }
 }
 
-module.exports = Struct;
+class Tuple extends AbstractDataType {
+  constructor(...types) {
+    super();
+    this.types = types;
+    this.shape = {};
+  }
+
+  lazyInit() {
+    this.buildShape();
+    this.createMarkup();
+    this.buffer = new ArrayBuffer(this.byteLength);
+    this.dataView = new DataView(this.buffer);
+    this.initGetSet();
+  }
+
+  buildShape() {
+    this.shape = Tuple.getShape(this.types);
+  }
+
+  static getShape(types) {
+    const shape = {};
+
+    const getShape = (types) => {
+      for (let i = 0; i < types.length; i++) {
+        const type = types[i];
+        const isStruct = Struct.isStruct(type);
+        if (isStruct) shape[i] = Struct.getShape(type.scheme);
+        else shape[i] = type;
+      }
+    };
+
+    getShape(types);
+
+    return shape;
+  }
+
+  static isTuple(entity) {
+    return entity instanceof Tuple;
+  }
+}
+
+class Struct extends AbstractDataType {
+  constructor(scheme) {
+    super();
+    this.scheme = scheme;
+    this.shape = {};
+  }
+
+  lazyInit() {
+    this.buildShape();
+    this.createMarkup();
+    this.buffer = new ArrayBuffer(this.byteLength);
+    this.dataView = new DataView(this.buffer);
+    this.initGetSet();
+  }
+
+  buildShape() {
+    this.shape = Struct.getShape(this.scheme);
+  }
+
+  static getShape(scheme) {
+    const result = {};
+
+    const getShape = (scheme) => {
+      for (const [k, v] of Object.entries(scheme)) {
+        const isTuple = Tuple.isTuple(v);
+        if (isTuple) result[k] = Tuple.getShape(v.types);
+        else result[k] = v;
+      }
+    };
+
+    getShape(scheme);
+
+    return result;
+  }
+
+  static isStruct(entity) {
+    return entity instanceof Struct;
+  }
+}
+
+// {
+//   const Color = new Tuple(
+//     Struct.U8,
+//     Struct.U16,
+//     Struct.U32,
+//     new Struct({
+//       firstName: Struct.String("ASCII"),
+//       color: new Tuple(Struct.U64, Struct.U32, Struct.U16),
+//       address: new Tuple(Struct.U8, Struct.U8),
+//     }),
+//   );
+
+//   Color.create([
+//     8,
+//     16,
+//     32,
+//     {
+//       firstName: "name",
+//       color: [64n, 32, 16],
+//       address: [8, 8],
+//     },
+//   ]);
+
+//   console.log("Instance before changes:", Color.markup);
+//   console.log(Color.buffer);
+// }
+
+console.log("\n");
+
+{
+  const Person = new Struct({
+    firstName: Struct.String("ASCII"),
+    color: new Tuple(
+      Struct.U64,
+      new Struct({
+        address: new Tuple(Struct.U16),
+      }),
+      Struct.U16,
+    ),
+  });
+
+  Person.create({
+    firstName: "Name",
+    color: [
+      64n,
+      {
+        address: [16],
+      },
+      16,
+    ],
+  });
+
+  console.log(Person.markup);
+  console.log(Person.buffer);
+}
