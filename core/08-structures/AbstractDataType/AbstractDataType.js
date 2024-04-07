@@ -58,10 +58,10 @@ class AbstractDataType {
     }
   }
 
-  createMarkup() {
+  // Method to create the markup based on the shape provided
+  static createMarkup(shape) {
     const markup = {};
     const sizes = {};
-    const shape = this.shape;
     let byteLength = 0;
     let offset = 0;
 
@@ -102,42 +102,63 @@ class AbstractDataType {
     buildMarkup(shape);
 
     sizes.TOTAL_SIZE = byteLength;
-    this.sizes = sizes;
-    this.byteLength = byteLength;
-    this.markup = markup;
+
+    return { sizes, byteLength, markup };
   }
 
-  initGetSet() {
-    Object.entries(this.markup).forEach(([k, v]) => {
+  // Method to initialize the getters and setters for the data structure
+  static initGetSet(ctx, markup) {
+    Object.entries(markup).forEach(([k, v]) => {
       const { TypedArray, encodeDecode, byteLength, length } = v;
-      const getset = getGetSetForDataView(TypedArray, this.dataView);
-      const contextifiedGetSet = getset.map((f) => f.bind(this.dataView));
+      const getset = getGetSetForDataView(TypedArray, ctx.dataView);
+      const contextifiedGetSet = getset.map((f) => f.bind(ctx.dataView));
 
-      this.markup[k] = {
+      ctx.markup[k] = {
         byteOffset: v.byteOffset,
         getset: contextifiedGetSet,
         byteLength,
       };
 
       if (encodeDecode) {
-        this.markup[k].encodeDecode = encodeDecode;
-        this.markup[k].length = length;
+        ctx.markup[k].encodeDecode = encodeDecode;
+        ctx.markup[k].length = length;
       }
     });
   }
 
+  // Method to lazily initialize the data structure
+  // All data initializes only when we call .create()
   lazyInit() {
     this.buildShape();
-    this.createMarkup();
-    this.buffer = new ArrayBuffer(this.byteLength);
-    this.dataView = new DataView(this.buffer);
-    this.initGetSet();
-    this.initGettersAndSetters();
+    const { markup, byteLength, sizes } = AbstractDataType.createMarkup(
+      this.shape,
+    );
+    this.markup = markup;
+    this.byteLength = byteLength;
+    this.sizes = sizes;
+
+    const { buffer, dataView } = AbstractDataType.createBuffer(this.byteLength);
+    this.buffer = buffer;
+    this.dataView = dataView;
+
+    const ctx = this;
+    AbstractDataType.initGetSet(ctx, markup);
+    AbstractDataType.initGettersAndSetters(ctx, markup);
   }
 
+  // Method to create a buffer and dataView to it for the data structure
+  static createBuffer(byteLength) {
+    const buffer = new ArrayBuffer(byteLength);
+    const dataView = new DataView(buffer);
+    return { buffer, dataView };
+  }
+
+  // Filling up buffer bases on provided values
   create(...values) {
     this.lazyInit();
 
+    // since values could have n-level of nesting, we have to plain it
+    // and then filling buffer with plains values
     const plainValues = ((arr) => {
       const getPlainValues = (arr) => {
         return arr.flatMap((item) => {
@@ -153,7 +174,6 @@ class AbstractDataType {
 
       return getPlainValues(arr);
     })(values);
-    this.plainValues = plainValues;
 
     const availableSlots = Object.entries(this.markup);
     const valuesToInsert = plainValues.length;
@@ -184,14 +204,15 @@ class AbstractDataType {
     return this;
   }
 
-  initGettersAndSetters() {
-    const keys = Object.entries(this.markup);
+  // Method to initialize the getters and setters for the data structure
+  static initGettersAndSetters(ctx, markup) {
+    const keys = Object.entries(markup);
     for (const [key, value] of keys) {
       const { getset, encodeDecode, byteOffset, length, byteLength } = value;
       const isString = encodeDecode;
       const [get, set] = getset;
 
-      Object.defineProperty(this, key, {
+      Object.defineProperty(ctx, key, {
         get: () => {
           // It's not string, just single value
           if (!isString) {
@@ -230,8 +251,32 @@ class AbstractDataType {
       });
     }
   }
+  // Creates deep copy of provided shape
+  #copyShape(shape) {
+    if (shape === null || typeof shape !== "object") return shape;
+    const clone = Array.isArray(shape) ? [] : {};
+    for (let key in shape) clone[key] = this.#copyShape(shape[key]);
+    return clone;
+  }
 
-  clone(buffer) {}
+  // Returns light-weighted copy.
+  from(buffer) {
+    const shape = this.#copyShape(this.shape);
+    const { markup, byteLength, sizes } = AbstractDataType.createMarkup(shape);
+    const buff = buffer.slice();
+    const dataView = new DataView(buff);
+    const abstractDataTypeLike = {
+      shape,
+      markup,
+      byteLength,
+      sizes,
+      buffer: buff,
+      dataView,
+    };
+    AbstractDataType.initGetSet(abstractDataTypeLike, markup);
+    AbstractDataType.initGettersAndSetters(abstractDataTypeLike, markup);
+    return abstractDataTypeLike;
+  }
 
   buildShape() {
     throw new Error("not implemented");
@@ -243,7 +288,7 @@ class AbstractDataType {
 }
 
 const getGetSetForDataView = (typedArray, dataView) => {
-  if (!typedArray) throw new Error("Data view is not initialized.");
+  if (!typedArray) throw new Error("Typed array not initialized.");
   switch (typedArray) {
     case Int8Array:
       return [dataView.getInt8, dataView.setInt8];

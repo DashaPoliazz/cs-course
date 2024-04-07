@@ -82,18 +82,14 @@ class Tuple extends AbstractDataType {
     skills: { singing: 100, dancing: 100, fighting: 50 },
     color: [255, 0, 200],
   });
-  for (const [k] of Object.entries(bob.markup)) {
-    console.log(Person[k]);
-  }
-  const bobClone = bob.clone(bob.buffer);
-  console.log(bobClone === bob);
-  for (const [k] of Object.entries(bobClone.markup)) {
-    console.log(Person[k]);
-  }
-  console.log("BOB:", bob.sizes);
-  bobClone["color.0"] = 1;
-  console.log(bobClone["color.0"]);
-  console.log(bobClone.buffer);
+
+  // Uncomment to see all values
+  //   for (const [k] of Object.entries(bob.markup)) {
+  //     console.log(Person[k]);
+  //   }
+  const bobClone = bob.from(bob.buffer);
+  bobClone["firstName"] = "Foo";
+  console.log(bob["firstName"], bobClone["firstName"]);
 }
 
 // {
@@ -149,7 +145,9 @@ console.log("\n");
 //     },
 //   });
 
-//   console.log(Family);
+//   console.log(Family["father.firstName"]);
+//   Family["father.firstName"] = "Rick";
+//   console.log(Family["father.firstName"]);
 // }
 
 console.log("\n");
