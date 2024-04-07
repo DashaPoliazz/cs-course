@@ -91,10 +91,18 @@ class AbstractDataType {
     return [64, Float64Array];
   }
 
-  static String(encoding) {
+  static String(encoding, length) {
+    if (!length) throw new Error("Only static strings is supported");
+
     switch (encoding) {
-      case "ASCII":
-        return Struct.U8;
+      case "ASCII": {
+        const [byteLength, TypedArray] = Struct.U8;
+        const encodeDecode = {
+          encode: (s) => [...s].map((c) => c.charCodeAt(0)),
+          decode: (c) => c.map((c) => String.fromCharCode(c)),
+        };
+        return [byteLength * length, TypedArray, encodeDecode];
+      }
       default:
         throw new Error(`Unsupported string encoding ${encoding}`);
     }
@@ -120,7 +128,11 @@ class AbstractDataType {
         markup[joinedKey] = {
           byteOffset: offset,
           TypedArray: v[1],
+          byteLength: v[1].BYTES_PER_ELEMENT,
         };
+
+        const encodeDecode = v[2];
+        if (encodeDecode) markup[joinedKey].encodeDecode = encodeDecode;
 
         offset += v[0] / 8;
 
@@ -136,14 +148,17 @@ class AbstractDataType {
 
   initGetSet() {
     Object.entries(this.markup).forEach(([k, v]) => {
-      const { TypedArray } = v;
+      const { TypedArray, encodeDecode, byteLength } = v;
       const getset = getGetSetForDataView(TypedArray, this.dataView);
       const contextifiedGetSet = getset.map((f) => f.bind(this.dataView));
 
       this.markup[k] = {
         byteOffset: v.byteOffset,
         getset: contextifiedGetSet,
+        byteLength,
       };
+
+      if (encodeDecode) this.markup[k].encodeDecode = encodeDecode;
     });
   }
 
@@ -171,13 +186,26 @@ class AbstractDataType {
     if (availableSlots.length !== valuesToInsert)
       throw new Error("Not all values entered");
 
-    let i = 0;
+    let plainValuesIndex = 0;
     for (const [_, v] of availableSlots) {
-      const { byteOffset, getset } = v;
+      const { byteOffset, getset, encodeDecode, byteLength } = v;
+
       const [get, set] = getset;
-      const valueToInsert = plainValues[i];
+      const valueToInsert = plainValues[plainValuesIndex];
+      if (encodeDecode) {
+        const { encode } = encodeDecode;
+        const chars = encode(valueToInsert);
+        let offset = byteOffset;
+        chars.forEach((char, idx) => {
+          console.log(char);
+          set(offset, char);
+          offset += byteLength;
+        });
+        plainValuesIndex++;
+        continue;
+      }
       set(byteOffset, valueToInsert);
-      i++;
+      plainValuesIndex++;
     }
   }
 
@@ -271,58 +299,58 @@ class Struct extends AbstractDataType {
   }
 }
 
-// {
-//   const Color = new Tuple(
-//     Struct.U8,
-//     Struct.U16,
-//     Struct.U32,
-//     new Struct({
-//       firstName: Struct.String("ASCII"),
-//       color: new Tuple(Struct.U64, Struct.U32, Struct.U16),
-//       address: new Tuple(Struct.U8, Struct.U8),
-//     }),
-//   );
+{
+  const Color = new Tuple(
+    Struct.U8,
+    Struct.U16,
+    Struct.U32,
+    new Struct({
+      firstName: Struct.String("ASCII", 4),
+      color: new Tuple(Struct.U64, Struct.U32, Struct.U16),
+      address: new Tuple(Struct.U8, Struct.U8),
+    }),
+  );
 
-//   Color.create([
-//     8,
-//     16,
-//     32,
-//     {
-//       firstName: "name",
-//       color: [64n, 32, 16],
-//       address: [8, 8],
-//     },
-//   ]);
+  Color.create([
+    8,
+    16,
+    32,
+    {
+      firstName: "name",
+      color: [64n, 32, 16],
+      address: [8, 8],
+    },
+  ]);
 
-//   console.log("Instance before changes:", Color.markup);
-//   console.log(Color.buffer);
-// }
+  console.log("Instance before changes:", Color.markup);
+  console.log(Color.buffer);
+}
 
 console.log("\n");
 
-{
-  const Person = new Struct({
-    firstName: Struct.String("ASCII"),
-    color: new Tuple(
-      Struct.U64,
-      new Struct({
-        address: new Tuple(Struct.U16),
-      }),
-      Struct.U16,
-    ),
-  });
+// {
+//   const Person = new Struct({
+//     firstName: Struct.String("ASCII", 4),
+//     color: new Tuple(
+//       Struct.U64,
+//       new Struct({
+//         address: new Tuple(Struct.U16),
+//       }),
+//       Struct.U16,
+//     ),
+//   });
 
-  Person.create({
-    firstName: "Name",
-    color: [
-      64n,
-      {
-        address: [16],
-      },
-      16,
-    ],
-  });
+//   Person.create({
+//     firstName: "Name",
+//     color: [
+//       64n,
+//       {
+//         address: [1],
+//       },
+//       1,
+//     ],
+//   });
 
-  console.log(Person.markup);
-  console.log(Person.buffer);
-}
+//   console.log(Person.markup);
+//   console.log(Person.buffer);
+// }
