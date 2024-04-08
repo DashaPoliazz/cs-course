@@ -181,23 +181,4 @@ class DoublyLinkedList {
 }
 const ll = new DoublyLinkedList();
 
-ll.append(0);
-ll.append(1);
-ll.append(2);
-ll.append(3);
-ll.append(4);
-ll.append(5);
-
-for (const node of ll) {
-  console.log(node);
-}
-
-ll.reverse();
-
-console.log("\n");
-
-for (const node of ll) {
-  console.log(node);
-}
-
-module.exports = DoublyLinkedList;
+module.exports = new DoublyLinkedList();
