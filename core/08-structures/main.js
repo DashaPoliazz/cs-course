@@ -152,62 +152,64 @@ console.log("\n");
 
 console.log("\n");
 
-// {
-//   const Father = new Struct({
-//     firstName: Struct.String("ASCII", 5),
-//     lastName: Struct.String("ASCII", 3),
-//     age: Struct.U8,
-//   });
-//   const fatherData = {
-//     firstName: "John",
-//     lastName: "Doe",
-//     age: 40,
-//   };
+{
+  const Father = new Struct({
+    firstName: Struct.String("ASCII", 5),
+    lastName: Struct.String("ASCII", 3),
+    age: Struct.U8,
+  });
+  const fatherData = {
+    firstName: "John",
+    lastName: "Doe",
+    age: 40,
+  };
 
-//   const Color = new Tuple(Struct.U8, Struct.U8, Struct.U8);
-//   const Child = new Struct({
-//     firstName: Struct.String("ASCII", 4),
-//     lastName: Struct.String("ASCII", 3),
-//     age: Struct.U8,
-//     favoriteColor: Color,
-//   });
-//   const childData = {
-//     firstName: "Rick",
-//     lastName: "Doe",
-//     age: 17,
-//     favoriteColor: [255, 110, 115],
-//   };
+  const Color = new Tuple(Struct.U8, Struct.U8, Struct.U8);
+  const Child = new Struct({
+    firstName: Struct.String("ASCII", 4),
+    lastName: Struct.String("ASCII", 3),
+    age: Struct.U8,
+    favoriteColor: Color,
+  });
+  const childData = {
+    firstName: "Rick",
+    lastName: "Doe",
+    age: 17,
+    favoriteColor: [255, 110, 115],
+  };
 
-//   const Mother = new Struct({
-//     firstName: Struct.String("ASCII", 9),
-//     lastName: Struct.String("ASCII", 3),
-//     age: Struct.U8,
-//     occupationCode: Struct.U32,
-//   });
-//   const motherData = {
-//     firstName: "Elisabeth",
-//     lastName: "Doe",
-//     age: 37,
-//     occupationCode: 1234,
-//   };
+  const Mother = new Struct({
+    firstName: Struct.String("ASCII", 9),
+    lastName: Struct.String("ASCII", 3),
+    age: Struct.U8,
+    occupationCode: Struct.U32,
+  });
+  const motherData = {
+    firstName: "Elisabeth",
+    lastName: "Doe",
+    age: 37,
+    occupationCode: 1234,
+  };
 
-//   const Family = new Struct({
-//     mother: Mother,
-//     father: Father,
-//     child: Child,
-//   });
+  const Family = new Struct({
+    mother: Mother,
+    father: Father,
+    child: Child,
+  });
 
-//   Family.create({
-//     mother: motherData,
-//     father: fatherData,
-//     child: childData,
-//   });
+  Family.create({
+    mother: motherData,
+    father: fatherData,
+    child: childData,
+  });
 
-//   console.log("Family:", Family);
-//   for (const [k] of Object.entries(Family.markup)) {
-//     console.log(Family[k]);
-//   }
-// }
+  console.log(Family);
+
+  console.log("Family:", Family);
+  for (const [k] of Object.entries(Family.markup)) {
+    console.log(Family[k]);
+  }
+}
 
 // {
 //   const Color = new Tuple(Struct.U8, Struct.U8, Struct.U8);
