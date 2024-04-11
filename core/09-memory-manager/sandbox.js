@@ -141,6 +141,7 @@ class Stack {
     this.#prevPointer = this.#basePointer;
     console.log("AFTER", this.#basePointer);
     // 2. Return pointer to frameBuffer with ability to perform read/write operations
+    return this.peek();
   }
   // Pops last frame from the stack
   // Todo:
@@ -148,6 +149,18 @@ class Stack {
   pop() {
     const metaData = this.#parseMetaData();
     const getset = this.#createGetSetForFrameBuffer(metaData);
+
+    // To remove frame we have to:
+    // 1. Know it's bounds
+    const leftBound = this.#basePointer;
+    const { _prevOffset, _nextOffset } = metaData;
+    const rightBound = _nextOffset;
+
+    // Reading memory as Uint8 and fill data with 0
+    new Uint8Array(this.#buffer).fill(0, leftBound, rightBound);
+    this.#stackPointer = this.#basePointer;
+    this.#basePointer = _prevOffset;
+
     return getset;
   }
   // Todo:
@@ -339,11 +352,20 @@ class Stack {
   // s.push(memoryChunk3);
   // s.debugBuffer("DebugBuffer");
 
-  const [get, set] = s.peek();
+  const [get1, set] = s.peek();
   // Todo: it's inconvinient to keep in mind correct offsets
   // [ ] Implement lenses for it
-  console.log(get(0, true));
-  console.log(get(4, true));
-  console.log(get(8, true));
-  console.log(get(12, true));
+  console.log(get1(0, true));
+  console.log(get1(4, true));
+  console.log(get1(8, true));
+  console.log(get1(12, true));
+
+  const poped = s.pop();
+  console.log(poped);
+  s.debugBuffer("After pop");
+
+  const [get2] = s.peek();
+  console.log(get2(0, true)); // 1
+  console.log(get2(1, true)); // 2
+  console.log(get2(2, true)); // 3
 }
