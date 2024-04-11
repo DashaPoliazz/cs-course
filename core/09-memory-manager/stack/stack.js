@@ -1,130 +1,12 @@
-const getTypedArrayCode = (typedArray) => {
-  switch (typedArray) {
-    case Uint8Array:
-      return 1;
-    case Uint8ClampedArray:
-      return 2;
-    case Int8Array:
-      return 3;
-    case Uint16Array:
-      return 4;
-    case Int16Array:
-      return 5;
-    case Uint32Array:
-      return 6;
-    case Int32Array:
-      return 7;
-    case Float32Array:
-      return 8;
-    case Float64Array:
-      return 9;
-    case BigInt64Array:
-      return 10;
-    case BigUint64Array:
-      return 11;
-    default:
-      throw new Error("Unsupported TypedArray");
-  }
-};
-const getTypedArrayFromCode = (code) => {
-  switch (code) {
-    case 1:
-      return Uint8Array;
-    case 2:
-      return Uint8ClampedArray;
-    case 3:
-      return Int8Array;
-    case 4:
-      return Uint16Array;
-    case 5:
-      return Int16Array;
-    case 6:
-      return Uint32Array;
-    case 7:
-      return Int32Array;
-    case 8:
-      return Float32Array;
-    case 9:
-      return Float64Array;
-    case 10:
-      return BigInt64Array;
-    case 11:
-      return BigUint64Array;
-    default:
-      throw new Error("Unsupported TypedArray code");
-  }
-};
+"use strict";
 
-const createNullableDeepCopy = (entity) => {
-  // Creates null as value for each key in object
-  if (entity === null || typeof entity !== "object") return null;
-  const clone = Array.isArray(entity) ? [] : {};
-  for (let key in entity) clone[key] = createNullableDeepCopy(entity[key]);
-  return clone;
-};
-const getContextifiedGetSet = (typedArray, dataView) => {
-  if (!typedArray) throw new Error("Typed array not initialized.");
-  const getGetSet = () => {
-    switch (typedArray) {
-      case Int8Array:
-        return [dataView.getInt8, dataView.setInt8];
-      case Uint8Array:
-        return [dataView.getUint8, dataView.setUint8];
-      case Uint8ClampedArray:
-        return [dataView.getUint8, dataView.setUint8];
-      case Int16Array:
-        return [dataView.getInt16, dataView.setInt16];
-      case Uint16Array:
-        return [dataView.getUint16, dataView.setUint16];
-      case Int32Array:
-        return [dataView.getInt32, dataView.setInt32];
-      case Uint32Array:
-        return [dataView.getUint32, dataView.setUint32];
-      case Float32Array:
-        return [dataView.getFloat32, dataView.setFloat32];
-      case Float64Array:
-        return [dataView.getFloat64, dataView.setFloat64];
-      case BigInt64Array:
-        return [dataView.getBigInt64, dataView.setBigInt64];
-      case BigUint64Array:
-        return [dataView.getBigUint64, dataView.setBigUint64];
-      default:
-        throw new Error("Unsupported TypedArray type");
-    }
-  };
-  const getset = getGetSet();
-  return getset.map((f) => f.bind(dataView));
-};
-
-class Lense {
-  #TypedArray;
-  #dataView;
-  #get;
-  #set;
-
-  constructor(TypedArray, dataView) {
-    this.#TypedArray = TypedArray;
-    this.#dataView = dataView;
-    const [get, set] = getContextifiedGetSet(TypedArray, dataView);
-    this.#get = get;
-    this.#set = set;
-    this.length = dataView.byteLength / TypedArray.BYTES_PER_ELEMENT;
-  }
-
-  get(idx) {
-    if (idx > this.length)
-      throw new Error(`Out of bounds error. 0 <= ${idx} < ${this.length}`);
-    const offset = this.#TypedArray.BYTES_PER_ELEMENT * idx;
-    return this.#get(offset, true);
-  }
-
-  set(idx, value) {
-    if (idx > this.length)
-      throw new Error(`Out of bounds error. 0 <= ${idx} < ${this.length}`);
-    const offset = this.#TypedArray.BYTES_PER_ELEMENT * idx;
-    return this.#set(offset, value, true);
-  }
-}
+const {
+  createNullableDeepCopy,
+  getContextifiedGetSet,
+  getTypedArrayCode,
+  getTypedArrayFromCode,
+} = require("../helpers/helpers.js");
+const Lense = require("./Lense.js");
 
 class Stack {
   // Please, keep in mind aligning when adding new metadata!
@@ -142,6 +24,7 @@ class Stack {
 
   #buffer;
   #capacity;
+  #framesQuantity = 0;
 
   #basePointer = 0; // points to the start of last added element in stack
   #stackPointer = 0; // points to the top
@@ -161,33 +44,50 @@ class Stack {
     console.log(msg, this.#buffer);
   }
 
+  #stackOverflow(frameBuffer) {
+    const sizeAfterAddingMetaData = this.#getAlignedValue(
+      this.#stackPointer + this.#metaDataLength,
+    );
+    const frameBufferSize = frameBuffer.length * frameBuffer.BYTES_PER_ELEMENT;
+    const frameSize = sizeAfterAddingMetaData + frameBufferSize;
+    if (frameSize > this.#capacity) return true;
+    return false;
+  }
   // Pushes buffer on the top
   push(frameBuffer) {
+    if (this.#stackOverflow(frameBuffer)) throw new Error("Stack overflow");
     // To push element on the top we have to:
     // 1. Create frame with metadata
-    console.log("BEFORE", this.#basePointer);
     this.#basePointer = this.#stackPointer;
     this.#createFrame(frameBuffer);
     this.#prevPointer = this.#basePointer;
-    console.log("AFTER", this.#basePointer);
+    this.#framesQuantity++;
     // 2. Return pointer to frameBuffer with ability to perform read/write operations
     return this.peek();
   }
   // Pops last frame from the stack
   pop() {
+    if (this.#framesQuantity === 0) return {};
     const metaData = this.#parseMetaData(this.#basePointer);
-    const lense = this.peek();
 
     // To remove frame we have to:
     // 1. Know it's bounds
     const leftBound = this.#basePointer;
     const { _prevOffset, _nextOffset } = metaData;
     const rightBound = _nextOffset;
+    const delta = rightBound - leftBound;
+
+    const frame = new Uint8Array(this.#buffer).slice(leftBound, rightBound);
+    const buff = new ArrayBuffer(delta);
+    new Uint8Array(buff).set(frame);
+
+    const lense = this.#createLense(metaData, buff);
 
     // Reading memory as Uint8 and fill data with 0
     new Uint8Array(this.#buffer).fill(0, leftBound, rightBound);
     this.#stackPointer = this.#basePointer;
     this.#basePointer = _prevOffset;
+    this.#framesQuantity--;
 
     return lense;
   }
@@ -198,17 +98,28 @@ class Stack {
     const lense = this.#createLense(metaData);
     return lense;
   }
-  #createLense(metaData) {
-    const frameBufferOffset = this.#getFrameBufferOffest(metaData);
+
+  #createLense(metaData, chunk) {
+    const frameBufferOffset = this.#getFrameBufferOffest(metaData, chunk);
     const { _code, _frameBufferLength } = metaData;
     const TypedArray = getTypedArrayFromCode(_code);
     const byteLength = _frameBufferLength * TypedArray.BYTES_PER_ELEMENT;
-    const dataView = new DataView(this.#buffer, frameBufferOffset, byteLength);
-    const lense = new Lense(TypedArray, dataView);
+
+    const dataView = chunk
+      ? new DataView(chunk, frameBufferOffset, byteLength)
+      : new DataView(this.#buffer, frameBufferOffset, byteLength);
+
+    const fromChunk = chunk ? true : false;
+    const lense = new Lense(TypedArray, dataView, {
+      fromChunk,
+    });
     return lense;
   }
-  #getFrameBufferOffest(metaData) {
-    const maybeOffset = this.#basePointer + this.#metaDataLength;
+
+  #getFrameBufferOffest(metaData, chunk) {
+    const maybeOffset = chunk
+      ? this.#metaDataLength
+      : this.#basePointer + this.#metaDataLength;
     const { _code } = metaData;
     const TypedArray = getTypedArrayFromCode(_code);
     return this.#getAlignedValue(maybeOffset, TypedArray.BYTES_PER_ELEMENT);
@@ -219,8 +130,6 @@ class Stack {
     const metaData = createNullableDeepCopy(this.#metaData);
     let offset = startOffset;
     let metaDataOffsetsIdx = 0;
-
-    console.log(this.#metaDataOffsets);
 
     for (const [k, v] of Object.entries(this.#metaData)) {
       const [TypedArray, len] = v;
@@ -234,6 +143,7 @@ class Stack {
 
     return metaData;
   }
+
   #createFrame(frameBuffer) {
     // To create stack frame we have to:
     // 1. insert metadata
@@ -353,9 +263,8 @@ class Stack {
 
     this.#metaDataOffsets = offsets;
     this.#metaDataLength = metadataLength;
-    console.log("LENGTH:", this.#metaDataLength);
   }
-  #getAlignedValue(value, alignmentValue) {
+  #getAlignedValue(value, alignmentValue = this.#newFrameAlignmentValue) {
     const remainder = value % alignmentValue;
     if (remainder) return value + (alignmentValue - remainder);
     return value;
@@ -377,6 +286,8 @@ class Stack {
   console.log("lense0.get(1)", lense0.get(1)); // 2
   console.log("lense0.get(2)", lense0.get(2)); // 3
 
+  console.log(...lense0.values()); // 2, 2, 3
+
   // s.debugBuffer("DebugBuffer");
 
   const memoryChunk2 = new Uint32Array([4, 5, 6, 7]);
@@ -390,14 +301,29 @@ class Stack {
   s.push(memoryChunk3);
 
   const lense2 = s.peek();
-  // Todo: it's inconvinient to keep in mind correct offsets
-  // [ ] Implement lenses for it
   console.log("lense2.get(0)", lense2.get(0));
   console.log("lense2.get(1)", lense2.get(1));
   console.log("lense2.get(2)", lense2.get(2));
   // console.log("get(4)", lense1.get(4)); // Out of bounds error
 
   s.debugBuffer("Before pop");
-  const poped = s.pop();
+  const lense3 = s.pop();
+  console.log("lense3.get(0)", lense3.get(0));
+  console.log("lense3.get(1)", lense3.get(1));
+  console.log("lense3.get(2)", lense3.get(2));
+
   s.debugBuffer("After pop");
+
+  // s.push(memoryChunk2); // stack overflow
+
+  const lense4 = s.pop();
+  console.log("lense4.get(0)", lense4.get(0));
+  console.log("lense4.get(1)", lense4.get(1));
+  console.log("lense4.get(2)", lense4.get(2));
+  console.log("lense4.get(2)", lense4.get(3));
+
+  const lense5 = s.pop();
+  console.log("lense5.get(0)", lense5.get(0));
+  console.log("lense5.get(1)", lense5.get(1));
+  console.log("lense5.get(2)", lense5.get(2));
 }
