@@ -243,7 +243,7 @@ class Stack {
 
     return out;
   }
-  #insertMetadata(payloadTypedArrray) {
+  #insertMetadata(frameBuffer) {
     // To insert metadata we have to perform following steps:
     // 1. Align currentPointer
     {
@@ -258,13 +258,13 @@ class Stack {
     let payloadTypedArrrayOffset = this.#servicePointer + this.#metadataLength;
     {
       const remainder =
-        payloadTypedArrrayOffset % payloadTypedArrray.BYTES_PER_ELEMENT;
+        payloadTypedArrrayOffset % frameBuffer.BYTES_PER_ELEMENT;
       if (remainder) payloadTypedArrrayOffset += remainder;
     }
 
     //    2.2. Calculate offset to the next element
     const payloadTypedArrayByteLength =
-      payloadTypedArrray.BYTES_PER_ELEMENT * payloadTypedArrray.length;
+      frameBuffer.BYTES_PER_ELEMENT * frameBuffer.length;
     let nextElementOffset =
       payloadTypedArrrayOffset + payloadTypedArrayByteLength;
     {
@@ -289,14 +289,14 @@ class Stack {
       this.#servicePointer,
       1,
     );
-    lengthBuffer[0] = payloadTypedArrray.length;
+    lengthBuffer[0] = frameBuffer.length;
     this.#servicePointer +=
       this.#metadata.frameBufferLengthTypedArray.BYTES_PER_ELEMENT;
 
     // 4. Insert type of typedArray
-    console.log("FROMSTACKFRAME2:", payloadTypedArrray);
+    console.log("FROMSTACKFRAME2:", frameBuffer);
 
-    const code = encodeTypedArrayData(payloadTypedArrray);
+    const code = encodeTypedArrayData(frameBuffer);
     const currElementType = new this.#metadata.frameBufferCodeTypedArray(
       this.#buffer,
       this.#servicePointer,
