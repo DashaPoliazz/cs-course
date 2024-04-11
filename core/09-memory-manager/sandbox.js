@@ -96,6 +96,36 @@ const getContextifiedGetSet = (typedArray, dataView) => {
   return getset.map((f) => f.bind(dataView));
 };
 
+class Lense {
+  #TypedArray;
+  #dataView;
+  #get;
+  #set;
+
+  constructor(TypedArray, dataView) {
+    this.#TypedArray = TypedArray;
+    this.#dataView = dataView;
+    const [get, set] = getContextifiedGetSet(TypedArray, dataView);
+    this.#get = get;
+    this.#set = set;
+    this.length = dataView.byteLength / TypedArray.BYTES_PER_ELEMENT;
+  }
+
+  get(idx) {
+    if (idx > this.length)
+      throw new Error(`Out of bounds error. 0 <= ${idx} < ${this.length}`);
+    const offset = this.#TypedArray.BYTES_PER_ELEMENT * idx;
+    return this.#get(offset, true);
+  }
+
+  set(idx, value) {
+    if (idx > this.length)
+      throw new Error(`Out of bounds error. 0 <= ${idx} < ${this.length}`);
+    const offset = this.#TypedArray.BYTES_PER_ELEMENT * idx;
+    return this.#set(offset, value, true);
+  }
+}
+
 class Stack {
   // Please, keep in mind aligning when adding new metadata!
   // Keep in mind, that we calculate offsets to the next frame based on the
@@ -144,11 +174,9 @@ class Stack {
     return this.peek();
   }
   // Pops last frame from the stack
-  // Todo:
-  // [ ] Should return lenses instead of getset
   pop() {
-    const metaData = this.#parseMetaData();
-    const getset = this.#createGetSetForFrameBuffer(metaData);
+    const metaData = this.#parseMetaData(this.#basePointer);
+    const lense = this.peek();
 
     // To remove frame we have to:
     // 1. Know it's bounds
@@ -161,24 +189,23 @@ class Stack {
     this.#stackPointer = this.#basePointer;
     this.#basePointer = _prevOffset;
 
-    return getset;
+    return lense;
   }
   // Todo:
   // [ ] Should return lenses instead of getset
   peek() {
-    const metaData = this.#parseMetaData();
-    const getset = this.#createGetSetForFrameBuffer(metaData);
-    return getset;
+    const metaData = this.#parseMetaData(this.#basePointer);
+    const lense = this.#createLense(metaData);
+    return lense;
   }
-
-  #createGetSetForFrameBuffer(metaData) {
+  #createLense(metaData) {
     const frameBufferOffset = this.#getFrameBufferOffest(metaData);
     const { _code, _frameBufferLength } = metaData;
     const TypedArray = getTypedArrayFromCode(_code);
     const byteLength = _frameBufferLength * TypedArray.BYTES_PER_ELEMENT;
     const dataView = new DataView(this.#buffer, frameBufferOffset, byteLength);
-    const getset = getContextifiedGetSet(TypedArray, dataView);
-    return getset;
+    const lense = new Lense(TypedArray, dataView);
+    return lense;
   }
   #getFrameBufferOffest(metaData) {
     const maybeOffset = this.#basePointer + this.#metaDataLength;
@@ -187,10 +214,10 @@ class Stack {
     return this.#getAlignedValue(maybeOffset, TypedArray.BYTES_PER_ELEMENT);
   }
 
-  // Parses metadata by basePointer
-  #parseMetaData() {
+  // Parses metadata starting with startOffset
+  #parseMetaData(startOffset) {
     const metaData = createNullableDeepCopy(this.#metaData);
-    let offset = this.#basePointer;
+    let offset = startOffset;
     let metaDataOffsetsIdx = 0;
 
     console.log(this.#metaDataOffsets);
@@ -339,33 +366,38 @@ class Stack {
 }
 
 {
-  const s = new Stack(50);
+  const s = new Stack(70);
   const memoryChunk1 = new Uint8Array([1, 2, 3]);
-  s.push(memoryChunk1);
+  const lense0 = s.push(memoryChunk1);
+
+  // Setting first element 2
+  console.log("lense0.set(0)", lense0.set(0, 2));
+
+  console.log("lense0.get(0)", lense0.get(0)); // 2
+  console.log("lense0.get(1)", lense0.get(1)); // 2
+  console.log("lense0.get(2)", lense0.get(2)); // 3
+
   // s.debugBuffer("DebugBuffer");
 
   const memoryChunk2 = new Uint32Array([4, 5, 6, 7]);
-  s.push(memoryChunk2);
-  s.debugBuffer("DebugBuffer");
+  const lense1 = s.push(memoryChunk2);
+  console.log("lense1.get(0)", lense1.get(0));
+  console.log("lense1.get(1)", lense1.get(1));
+  console.log("lense1.get(2)", lense1.get(2));
+  console.log("lense1.get(2)", lense1.get(3));
 
-  // const memoryChunk3 = new Uint8Array([7, 8, 9]);
-  // s.push(memoryChunk3);
-  // s.debugBuffer("DebugBuffer");
+  const memoryChunk3 = new Uint8Array([7, 8, 9]);
+  s.push(memoryChunk3);
 
-  const [get1, set] = s.peek();
+  const lense2 = s.peek();
   // Todo: it's inconvinient to keep in mind correct offsets
   // [ ] Implement lenses for it
-  console.log(get1(0, true));
-  console.log(get1(4, true));
-  console.log(get1(8, true));
-  console.log(get1(12, true));
+  console.log("lense2.get(0)", lense2.get(0));
+  console.log("lense2.get(1)", lense2.get(1));
+  console.log("lense2.get(2)", lense2.get(2));
+  // console.log("get(4)", lense1.get(4)); // Out of bounds error
 
+  s.debugBuffer("Before pop");
   const poped = s.pop();
-  console.log(poped);
   s.debugBuffer("After pop");
-
-  const [get2] = s.peek();
-  console.log(get2(0, true)); // 1
-  console.log(get2(1, true)); // 2
-  console.log(get2(2, true)); // 3
 }
