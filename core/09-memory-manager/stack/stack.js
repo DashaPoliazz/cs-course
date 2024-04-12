@@ -6,7 +6,7 @@ const {
   getTypedArrayCode,
   getTypedArrayFromCode,
 } = require("../helpers/helpers.js");
-const Lense = require("./Lense.js");
+const Lense = require("../Lense.js");
 
 class Stack {
   // Please, keep in mind aligning when adding new metadata!
@@ -274,56 +274,4 @@ class Stack {
   }
 }
 
-{
-  const s = new Stack(70);
-  const memoryChunk1 = new Uint8Array([1, 2, 3]);
-  const lense0 = s.push(memoryChunk1);
-
-  // Setting first element 2
-  console.log("lense0.set(0)", lense0.set(0, 2));
-
-  console.log("lense0.get(0)", lense0.get(0)); // 2
-  console.log("lense0.get(1)", lense0.get(1)); // 2
-  console.log("lense0.get(2)", lense0.get(2)); // 3
-
-  console.log(...lense0.values()); // 2, 2, 3
-
-  // s.debugBuffer("DebugBuffer");
-
-  const memoryChunk2 = new Uint32Array([4, 5, 6, 7]);
-  const lense1 = s.push(memoryChunk2);
-  console.log("lense1.get(0)", lense1.get(0));
-  console.log("lense1.get(1)", lense1.get(1));
-  console.log("lense1.get(2)", lense1.get(2));
-  console.log("lense1.get(2)", lense1.get(3));
-
-  const memoryChunk3 = new Uint8Array([7, 8, 9]);
-  s.push(memoryChunk3);
-
-  const lense2 = s.peek();
-  console.log("lense2.get(0)", lense2.get(0));
-  console.log("lense2.get(1)", lense2.get(1));
-  console.log("lense2.get(2)", lense2.get(2));
-  // console.log("get(4)", lense1.get(4)); // Out of bounds error
-
-  s.debugBuffer("Before pop");
-  const lense3 = s.pop();
-  console.log("lense3.get(0)", lense3.get(0));
-  console.log("lense3.get(1)", lense3.get(1));
-  console.log("lense3.get(2)", lense3.get(2));
-
-  s.debugBuffer("After pop");
-
-  // s.push(memoryChunk2); // stack overflow
-
-  const lense4 = s.pop();
-  console.log("lense4.get(0)", lense4.get(0));
-  console.log("lense4.get(1)", lense4.get(1));
-  console.log("lense4.get(2)", lense4.get(2));
-  console.log("lense4.get(2)", lense4.get(3));
-
-  const lense5 = s.pop();
-  console.log("lense5.get(0)", lense5.get(0));
-  console.log("lense5.get(1)", lense5.get(1));
-  console.log("lense5.get(2)", lense5.get(2));
-}
+module.exports = Stack;

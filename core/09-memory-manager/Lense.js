@@ -1,4 +1,4 @@
-const { getContextifiedGetSet } = require("../helpers/helpers.js");
+const { getContextifiedGetSet } = require("./helpers/helpers.js");
 
 class Lense {
   #TypedArray;
