@@ -59,9 +59,8 @@ class Tuple extends AbstractDataType {
   }
 }
 
-// Usages
-
 {
+  // Usages
   const Skills = new Struct({
     singing: Struct.U8, // Unsigned число 8 бит
     dancing: Struct.U8,

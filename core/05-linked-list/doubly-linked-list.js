@@ -53,12 +53,13 @@ class DoublyLinkedList {
   // Delete first node which value === value
   // T -> O(n)
   // S -> O(1)
-  delete(value) {
+  delete(predicateOrValue) {
     // traverse until the value will be found
     let curr = this.head;
-    while (curr && curr.value !== value) {
-      curr = curr.next;
-    }
+    if (typeof predicateOrValue === "function")
+      while (curr && !predicateOrValue(curr.value)) curr = curr.next;
+    else while (curr && curr.value !== predicateOrValue) curr = curr.next;
+
     if (!curr) return undefined;
 
     this.length -= 1;
@@ -67,20 +68,20 @@ class DoublyLinkedList {
     if (curr === this.head) {
       if (this.head === this.tail) {
         this.head = this.tail = null;
-        return value;
+        return predicateOrValue;
       }
 
       this.head.next.prev = null;
       this.head = this.head.next;
 
-      return value;
+      return predicateOrValue;
     }
     // Delete as tail
     if (curr === this.tail) {
       this.tail.prev.next = null;
       this.tail = this.tail.prev;
 
-      return value;
+      return predicateOrValue;
     }
     // Delete as middle element
     curr.next.prev = curr.prev;
@@ -89,7 +90,7 @@ class DoublyLinkedList {
     curr.prev = null;
     curr.next = null;
 
-    return value;
+    return predicateOrValue;
   }
 
   // Adding node at index
@@ -122,6 +123,18 @@ class DoublyLinkedList {
   get(index) {
     const node = this.#traverseToIndex(index);
     return node ? node.value : undefined;
+  }
+
+  find(cb) {
+    let curr = this.head;
+    while (curr) {
+      if (cb(curr.value)) break;
+      curr = curr.next;
+    }
+
+    if (!curr) return;
+
+    return curr;
   }
 
   // Returns node whose index === index
@@ -179,6 +192,5 @@ class DoublyLinkedList {
     };
   }
 }
-const ll = new DoublyLinkedList();
 
-module.exports = new DoublyLinkedList();
+module.exports = DoublyLinkedList;

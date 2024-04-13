@@ -1,5 +1,7 @@
-const ll = require("../05-linked-list/doubly-linked-list.js");
+const DoublyLinkesList = require("../05-linked-list/doubly-linked-list.js");
 const Memory = require("./memory.js");
+
+const ll = new DoublyLinkesList();
 
 class Deq {
   #memory;
