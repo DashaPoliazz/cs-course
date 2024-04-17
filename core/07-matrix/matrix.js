@@ -105,44 +105,46 @@ class Matrix {
   }
 }
 
-{
-  const matrix2n2n2 = new Matrix(Int32Array, 2, 2, 2);
+// {
+//   const matrix2n2n2 = new Matrix(Int32Array, 2, 2, 2);
 
-  matrix2n2n2.set(0, 0, 0, 1);
-  matrix2n2n2.set(0, 0, 1, 2);
-  matrix2n2n2.set(0, 1, 0, 3);
-  matrix2n2n2.set(0, 1, 1, 4);
+//   matrix2n2n2.set(0, 0, 0, 1);
+//   matrix2n2n2.set(0, 0, 1, 2);
+//   matrix2n2n2.set(0, 1, 0, 3);
+//   matrix2n2n2.set(0, 1, 1, 4);
 
-  matrix2n2n2.set(1, 0, 0, 5);
-  matrix2n2n2.set(1, 0, 1, 6);
-  matrix2n2n2.set(1, 1, 0, 7);
-  matrix2n2n2.set(1, 1, 1, 8);
+//   matrix2n2n2.set(1, 0, 0, 5);
+//   matrix2n2n2.set(1, 0, 1, 6);
+//   matrix2n2n2.set(1, 1, 0, 7);
+//   matrix2n2n2.set(1, 1, 1, 8);
 
-  matrix2n2n2.get(0, 0, 0); // 1
-  matrix2n2n2.get(0, 1, 0); // 2
-  matrix2n2n2.get(0, 0, 1); // 3
-  matrix2n2n2.get(0, 1, 1); // 4
+//   matrix2n2n2.get(0, 0, 0); // 1
+//   matrix2n2n2.get(0, 1, 0); // 2
+//   matrix2n2n2.get(0, 0, 1); // 3
+//   matrix2n2n2.get(0, 1, 1); // 4
 
-  matrix2n2n2.get(1, 0, 0); // 5
-  matrix2n2n2.get(1, 1, 0); // 6
-  matrix2n2n2.get(1, 0, 1); // 7
-  matrix2n2n2.get(1, 1, 1); // 8
+//   matrix2n2n2.get(1, 0, 0); // 5
+//   matrix2n2n2.get(1, 1, 0); // 6
+//   matrix2n2n2.get(1, 0, 1); // 7
+//   matrix2n2n2.get(1, 1, 1); // 8
 
-  console.log(matrix2n2n2.buffer);
-}
-{
-  const matrix3n4n5 = new Matrix(Int32Array, 2, 2, 2);
+//   console.log(matrix2n2n2.buffer);
+// }
+// {
+//   const matrix3n4n5 = new Matrix(Int32Array, 2, 2, 2);
 
-  matrix3n4n5.set(0, 0, 0, 1);
-  matrix3n4n5.set(0, 0, 1, 2);
-  matrix3n4n5.set(0, 1, 0, 3);
-  matrix3n4n5.set(0, 1, 1, 4);
+//   matrix3n4n5.set(0, 0, 0, 1);
+//   matrix3n4n5.set(0, 0, 1, 2);
+//   matrix3n4n5.set(0, 1, 0, 3);
+//   matrix3n4n5.set(0, 1, 1, 4);
 
-  matrix3n4n5.set(1, 0, 0, 5);
-  matrix3n4n5.set(1, 0, 1, 6);
-  matrix3n4n5.set(1, 1, 0, 7);
-  matrix3n4n5.set(1, 1, 1, 8);
+//   matrix3n4n5.set(1, 0, 0, 5);
+//   matrix3n4n5.set(1, 0, 1, 6);
+//   matrix3n4n5.set(1, 1, 0, 7);
+//   matrix3n4n5.set(1, 1, 1, 8);
 
-  // [1, 2, 3, 4, 5, 6, 7, 8, 9]
-  console.log(Array.from(matrix3n4n5.values()));
-}
+//   // [1, 2, 3, 4, 5, 6, 7, 8, 9]
+//   console.log(Array.from(matrix3n4n5.values()));
+// }
+
+module.exports = Matrix;
