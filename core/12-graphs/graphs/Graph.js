@@ -1,4 +1,4 @@
-const Matrix = require("../07-matrix/matrix.js");
+const Matrix = require("../../07-matrix/matrix.js");
 
 class Graph {
   constructor(x, y) {

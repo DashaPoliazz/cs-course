@@ -1,3 +1,5 @@
+const Graph = require("./graphs/Graph.js");
+
 {
   // Mixed graph
   //     >(1)<--->(4) ---->(5)
