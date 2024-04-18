@@ -1,2 +1,2 @@
-![alt text]("./visualisation/image.png");
-![alt text]("./visualisation/graphviz.jpg");
+![alt text](myviz.png)
+![alt text](graphviz.png)
