@@ -26,7 +26,15 @@ class AVL {
 
     return Math.max(leftSubtreeHeight, rightSubtreeHeight);
   }
+  find(value, node) {
+    if (!node) return;
 
+    const cmp = this.comparator(node.value, value);
+
+    if (cmp === 0) return value;
+    if (cmp === -1) return this.find(value, node.left);
+    if (cmp === 1) return this.find(value, node.right);
+  }
   insert(value) {
     if (!this.head) {
       this.head = new Node(value);

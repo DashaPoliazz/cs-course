@@ -208,3 +208,52 @@ describe("insertion", () => {
     assert.equal(avl.length, 5);
   });
 });
+
+describe("lookup", () => {
+  it("should find the value that exists for T = O(log(H))", () => {
+    const calcRecursiveCalls = () => {
+      let calls = 0;
+
+      // this is copy of the AVL class 'find' method
+      const find = (value, node) => {
+        if (!node) return [null, calls];
+
+        calls += 1;
+        const cmp = comparator(node.value, value);
+
+        if (cmp === 0) return [value, calls];
+        if (cmp === -1) return find(value, node.left);
+        if (cmp === 1) return find(value, node.right);
+      };
+
+      return find;
+    };
+
+    const avl = new AVL(comparator);
+
+    // create a 'linked-list'
+    for (let i = 0; i < 16; i++) avl.insert(i);
+    const height = avl.height;
+    assert.equal(height, 5);
+
+    let maxCalls = 0;
+    for (let i = 0; i < 16; i++) {
+      const [_, calls] = calcRecursiveCalls()(i, avl.head);
+      maxCalls = Math.max(maxCalls, calls);
+    }
+
+    // Max calls to find value should not be greater than Log(H), where H - height
+    assert.equal(maxCalls <= height, true);
+  });
+
+  it("should return 'undefined' if the value doesn't exist", () => {
+    const avl = new AVL(comparator);
+
+    // create a 'linked-list'
+    for (let i = 0; i < 16; i++) avl.insert(i);
+    const height = avl.height;
+    assert.equal(height, 5);
+
+    assert.equal(avl.find(42), undefined);
+  });
+});
