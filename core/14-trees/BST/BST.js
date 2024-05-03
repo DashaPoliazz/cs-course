@@ -18,8 +18,8 @@ class BST {
     this.length = 0;
   }
 
-  // T -> O(LogN)
-  // S -> O(LogN)
+  // T -> O(N)
+  // S -> O(N)
   insert(value) {
     const nodeToInsert = new Node(value);
 
@@ -84,13 +84,15 @@ class BST {
     return nodeToInsert.value;
   }
 
-  // T -> O(LogN)
-  // S -> O(LogN)
+  // T -> O(N)
+  // S -> O(1)
   remove(needle) {
     const maybeNodeToRemove = this.find(needle);
     if (!maybeNodeToRemove) return;
 
     let { node: nodeToRemove, parent } = maybeNodeToRemove;
+    if (nodeToRemove === this.head) this.head = null;
+
     this.length -= 1;
 
     if (nodeToRemove.left) {
@@ -145,8 +147,8 @@ class BST {
     }
   }
 
-  // T -> O(LogN)
-  // S -> O(LogN)
+  // T -> O(N)
+  // S -> O(N)
   find(needle) {
     const doLookup = (node, parent) => {
       if (!node) return;

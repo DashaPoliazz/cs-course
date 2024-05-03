@@ -10,10 +10,12 @@ class AVL {
    * @param {(x1: T, x2: T) => -1 | 0 | 1} comparator
    */
   constructor(comparator) {
-    this.length = 0;
     this.comparator = comparator;
+    this.length = 0;
   }
 
+  // T - O(N)
+  // S - O(N)
   get height() {
     return this.#height(this.head);
   }
@@ -26,15 +28,52 @@ class AVL {
 
     return Math.max(leftSubtreeHeight, rightSubtreeHeight);
   }
-  find(value, node) {
+  // T - O(Log(N))
+  // S - O(Log(N))
+  find(value, node = this.head, parent) {
     if (!node) return;
 
     const cmp = this.comparator(node.value, value);
 
-    if (cmp === 0) return value;
-    if (cmp === -1) return this.find(value, node.left);
-    if (cmp === 1) return this.find(value, node.right);
+    if (cmp === 0) return { node, parent };
+    if (cmp === -1) return this.find(value, node.left, node);
+    if (cmp === 1) return this.find(value, node.right, node);
   }
+  // T - O(Log(N))
+  // S - O(1)
+  remove(needle) {
+    const maybeNodeToRemove = this.find(needle);
+    if (!maybeNodeToRemove) return;
+
+    let { node: nodeToRemove, parent } = maybeNodeToRemove;
+    if (nodeToRemove === this.head) this.head = null;
+
+    this.length -= 1;
+
+    if (nodeToRemove.left) {
+      let curr = nodeToRemove.left;
+      let prev = nodeToRemove.left;
+      // moving right until the biggest value has beeen met
+      while (curr.right) {
+        prev = curr;
+        curr = curr.right;
+      }
+
+      prev.right = curr.left;
+      curr.left = nodeToRemove.left;
+      curr.right = nodeToRemove.right;
+      nodeToRemove = curr;
+
+      // removing from the middle
+      if (parent) parent.left = curr;
+      // removing from the head
+      else this.head = curr;
+
+      return nodeToRemove.value;
+    }
+  }
+  // T - O(Log(N))
+  // S - O(Log(N))
   insert(value) {
     if (!this.head) {
       this.head = new Node(value);

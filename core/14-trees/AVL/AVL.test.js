@@ -1,7 +1,6 @@
 const { it, describe } = require("node:test");
 const assert = require("node:assert");
 const AVL = require("./AVL.js");
-const Node = require("../Node/Node.js");
 const buildTreeFrompPreorderInorder = require("../helpers/buildTreeFromPreorderInorderTraversals.js");
 const compareTrees = require("../helpers/compareTrees.js");
 
@@ -169,7 +168,6 @@ describe("rotations", () => {
       assert.equal(avl.height, 3);
       const inorder = [...avl.inorder()];
       const preorder = [...avl.preorder()];
-      console.log(inorder, preorder);
       const compareWith = buildTreeFrompPreorderInorder(preorder, inorder);
       assert.equal(compareTrees(compareWith, avl.head), true);
     });
@@ -255,5 +253,54 @@ describe("lookup", () => {
     assert.equal(height, 5);
 
     assert.equal(avl.find(42), undefined);
+  });
+
+  it("should find the value correctly", () => {
+    const avl = new AVL(comparator);
+
+    avl.insert(1);
+
+    const result1 = avl.find(1);
+
+    assert.equal(result1.node.value, 1);
+    assert.equal(result1.parent, null);
+
+    avl.insert(2);
+    avl.insert(3);
+    avl.insert(4);
+    avl.insert(5);
+
+    const result2 = avl.find(5);
+
+    assert.equal(result2.node.value, 5);
+    assert.equal(result2.parent.value, 4);
+  });
+});
+
+describe("removing", () => {
+  it("should remove remove head correctly", () => {
+    const avl = new AVL(comparator);
+
+    avl.insert(1);
+    avl.remove(1);
+
+    assert.equal(avl.length, 0);
+    assert.equal(avl.head, null);
+  });
+
+  it("should remove middle node correctly", () => {
+    const avl = new AVL(comparator);
+
+    avl.insert(1);
+    avl.insert(2);
+    avl.insert(3);
+    avl.insert(4);
+    avl.insert(5);
+    avl.insert(6);
+
+    avl.remove(5);
+
+    assert.equal(avl.length, 5);
+    assert.equal(avl.validate(avl.head), true);
   });
 });
