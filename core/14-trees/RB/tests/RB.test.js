@@ -86,7 +86,7 @@ describe("validations", () => {
 
   it("should validate the valid tree correctly", () => {
     const rb = createInvalidTree();
-    assert.equal(rb.validate(rb.root, comparator), false);
+    assert.equal(RBValidator.validate(rb.root, comparator), false);
   });
 });
 
