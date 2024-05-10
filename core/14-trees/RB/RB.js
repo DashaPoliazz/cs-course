@@ -121,7 +121,7 @@ class RB {
             node = this.leftRightCase(grandparent);
           } else {
             // Linear case (listing 1.2)
-            node = this.leftLeftCase(grandparent, true);
+            node = this.leftLeftCase(grandparent);
           }
           // Repaint the nodes
           node.left.color = COLORS.RED;
@@ -144,7 +144,7 @@ class RB {
             node = this.rightLeftCase(grandparent);
           } else {
             // Linear case (listing 1.1)
-            node = this.rightRightCase(grandparent, true);
+            node = this.rightRightCase(grandparent);
           }
           // Repaint the nodes
           node.left.color = COLORS.RED;
@@ -157,49 +157,42 @@ class RB {
     }
   }
 
-  leftLeftCase(node, isShortRotation = false) {
-    return this.rotateToRight(node, isShortRotation);
+  leftLeftCase(node) {
+    return this.rotateToRight(node);
   }
   leftRightCase(node) {
     node.left = this.rotateToLeft(node.left);
     return this.leftLeftCase(node);
   }
-  rightRightCase(node, isShortRotation = false) {
-    return this.rotateToLeft(node, isShortRotation);
+  rightRightCase(node) {
+    return this.rotateToLeft(node);
   }
   rightLeftCase(node) {
     node.right = this.rotateToRight(node.right);
     return this.rightRightCase(node);
   }
-  rotateToRight(node, isShortRotation) {
-    const newHead = node.left;
+  rotateToRight(node) {
+    let newHead = node.left;
     node.left = newHead.right;
     if (newHead.right) newHead.right.parent = node;
-    newHead.right = node;
     newHead.parent = node.parent;
+    if (!node.parent) this.root = newHead;
+    if (node.parent && node === node.parent.left) node.parent.left = newHead;
+    else node.parent && (node.parent.right = newHead);
+    newHead.right = node;
     node.parent = newHead;
-    if (node === this.root) {
-      this.root = newHead;
-      newHead.parent = null;
-    } else {
-      if (isShortRotation) newHead.parent.left = newHead;
-    }
     return newHead;
   }
-  rotateToLeft(node, isShortRotation) {
-    const newHead = node.right;
+  rotateToLeft(node) {
+    let newHead = node.right;
     node.right = newHead.left;
     if (newHead.left) newHead.left.parent = node;
-    newHead.left = node;
     newHead.parent = node.parent;
+    if (!node.parent) this.root = newHead;
+    if (node.parent && node === node.parent.left) node.parent.left = newHead;
+    else node.parent && (node.parent.right = newHead);
+    newHead.left = node;
     node.parent = newHead;
-    if (node === this.root) {
-      this.root = newHead;
-      newHead.parent = null;
-    } else {
-      if (isShortRotation) newHead.parent.right = newHead;
-    }
-
     return newHead;
   }
 
