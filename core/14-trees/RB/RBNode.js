@@ -9,7 +9,7 @@ class RBNode {
    * @param {RBNode} left left node
    * @param {RBNode} right right node
    */
-  constructor(value, color, parent, left, right) {
+  constructor(value, color, parent = null, left = null, right = null) {
     this.value = value;
     this.color = color;
     this.parent = parent;

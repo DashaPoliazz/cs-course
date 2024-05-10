@@ -1,4 +1,3 @@
-const RB = require("../RB.js");
 const COLORS = require("../colors.js");
 
 class RBValidator {
@@ -55,8 +54,17 @@ class RBValidator {
     const sequenceValidation = RBValidator.validateSequence(node, comparator);
     const colorsValidation = RBValidator.validateColors(node);
     const blackHegithValidation = RBValidator.validateBlackHeight(node);
+    const relationshipValidattion = RBValidator.validateRelationship(
+      node,
+      null,
+    );
 
-    return sequenceValidation && colorsValidation && blackHegithValidation;
+    return (
+      sequenceValidation &&
+      colorsValidation &&
+      blackHegithValidation &&
+      relationshipValidattion
+    );
   }
 
   /**
@@ -92,7 +100,10 @@ class RBValidator {
   static validateColors(node) {
     if (!node) return true;
     // rule #2 violation
-    if (node === this.root && node.color === COLORS.RED) return false;
+    if (!node.parent && node.color === COLORS.RED) {
+      console.log("HIT");
+      return false;
+    }
     if (node.color === COLORS.RED) {
       // rule #4 violation
       if (node.parent && node.parent.color === COLORS.RED) return false;
@@ -110,10 +121,20 @@ class RBValidator {
    * @param {Node} node
    * @returns boolean
    */
-  static validateBlackHeight(node = this.root) {
+  static validateBlackHeight(node) {
     const [leftBlackHeight, rightBlackHeight] =
       RBValidator.getBlackHeight(node);
     return leftBlackHeight === rightBlackHeight;
+  }
+
+  static validateRelationship(node, parent = null) {
+    if (!node) return true;
+    if (node.parent !== parent) return false;
+
+    return (
+      RBValidator.validateRelationship(node.left, node) &&
+      RBValidator.validateRelationship(node.right, node)
+    );
   }
 }
 
