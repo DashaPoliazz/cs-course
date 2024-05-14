@@ -96,6 +96,25 @@ class RB {
     this.size += 1;
   }
 
+  /**
+   * T - O(LogN)
+   * S - O(LogN)
+   *
+   * @param {T} value
+   * @returns {T | undefined}
+   */
+  find(value) {
+    let curr = this.root;
+
+    while (curr) {
+      const cmp = this.comparator(curr.value, value);
+
+      if (cmp === 0) return curr.value;
+      if (cmp === -1) curr = curr.left;
+      if (cmp === 1) curr = curr.right;
+    }
+  }
+
   fix(node) {
     while (
       node.parent &&

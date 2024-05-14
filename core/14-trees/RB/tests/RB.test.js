@@ -254,6 +254,33 @@ describe("insertions", () => {
   });
 });
 
+describe("lookup", () => {
+  it("should return 'undefined' if the value doesn't exist", () => {
+    const rb = new RB(comparator);
+    for (let i = 0; i < 16; i++) rb.insert(i);
+    assert.equal(rb.find(42), undefined);
+  });
+
+  it("should find the value correctly", () => {
+    const rb = new RB(comparator);
+
+    rb.insert(1);
+
+    const result1 = rb.find(1);
+
+    assert.equal(result1, 1);
+
+    rb.insert(2);
+    rb.insert(3);
+    rb.insert(4);
+    rb.insert(5);
+
+    const result2 = rb.find(5);
+
+    assert.equal(result2, 5);
+  });
+});
+
 function createValidTree() {
   // 	        10(B)
   // 	  /                \

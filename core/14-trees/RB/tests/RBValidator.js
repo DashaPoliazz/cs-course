@@ -101,7 +101,6 @@ class RBValidator {
     if (!node) return true;
     // rule #2 violation
     if (!node.parent && node.color === COLORS.RED) {
-      console.log("HIT");
       return false;
     }
     if (node.color === COLORS.RED) {
