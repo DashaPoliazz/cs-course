@@ -88,6 +88,13 @@ class Trie {
     return curr.term;
   }
 
+  /**
+   * Returns a functor that represents the traversal of the
+   * trie starting from the current node with the given character.
+   *
+   * @param {string} char
+   * @returns {Object}
+   */
   go(char) {
     const Box = (node) => ({
       go: (char) => {
