@@ -1,4 +1,4 @@
-const Node = require("./node.js");
+const Node = require("./charNode.js");
 
 const DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 

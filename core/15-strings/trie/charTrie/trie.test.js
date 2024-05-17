@@ -1,6 +1,6 @@
 const { it, describe } = require("node:test");
 const assert = require("node:assert");
-const Trie = require("./trie.js");
+const Trie = require("./charTrie.js");
 
 describe("isertion", () => {
   it("should insert the 1 char word correctly", () => {
