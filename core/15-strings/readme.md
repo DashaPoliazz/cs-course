@@ -121,21 +121,21 @@ This project implements a pattern matching algorithm using a Trie data structure
 
 ## Example of usages
 
-We can read this pattern as "read all mathes before 'baz'"
+We can read this pattern as "read all matches before 'baz'"
 
 ```
 const pattern = "*.baz";
 match(pattern, ["foo.bla.bar.baz"]); // -> ["foo", "bla", "bar", "baz"]
 ```
 
-We can read this pattern as "read all mathes after 'foo'"
+We can read this pattern as "read all matches after 'foo'"
 
 ```
 const pattern = "foo.**";
 match(pattern, ["foo.bar.bla"]); // -> ["foo", "bar", "bla"]
 ```
 
-We can read this pattern as "read all mathes after 'foo'"
+We can read this pattern as "read all matches after 'foo'"
 
 ```
 const pattern = "foo.*.baz.baf.**";
