@@ -72,7 +72,7 @@ A Trie, also known as a prefix tree or digital tree, is a tree-like data structu
      - If a character is present, move to the next node.
      - If not, the key is not present in the Trie.
      - If all characters are found, return true if the end of the word flag is set.
-   - **Includes:**
+   - **Go:**
      - Provides you ability to move around char by char with 'Box' functor
 
 ```
