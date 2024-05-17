@@ -75,12 +75,12 @@ A Trie, also known as a prefix tree or digital tree, is a tree-like data structu
    - **Includes:**
      - Provides you ability to move around char by char with 'Box' functor
 
-   ```
-     go(char) {
-    	const Box = (node) => ({
-      		go: (char) => {
-        		const [_, charPosition] = this.#charPosition(char);
-        		const boxedNode =
+```
+  go(char) {
+    const Box = (node) => ({
+      go: (char) => {
+        const [_, charPosition] = this.#charPosition(char);
+        const boxedNode =
           node.children[charPosition] === -1
             ? this.#createNode()
             : node.children[charPosition];
@@ -90,8 +90,8 @@ A Trie, also known as a prefix tree or digital tree, is a tree-like data structu
     });
 
     return Box(this.root).go(char);
-   }
-   ```
+  }
+```
 
 ## Time Complexity
 
