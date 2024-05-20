@@ -50,3 +50,63 @@ describe("sorting", () => {
     assert.deepEqual(arr, sortedCopy);
   });
 });
+
+describe("push", () => {
+  it("should push value correctly", () => {
+    const comparator = (x1, x2) => x1 >= x2;
+    const h = new Heap([], comparator);
+    for (let i = 0; i < 1000; i++) {
+      const rnd = Math.floor(Math.random() * 10000);
+      h.push(rnd);
+    }
+    const incorrectRelationship = h.lookup.find(
+      (_, i) => h.validate(i) === false,
+    );
+    assert.equal(incorrectRelationship, undefined);
+  });
+});
+
+describe("pop", () => {
+  it("should pop value correcrly", () => {
+    const comparator = (x1, x2) => x1 >= x2;
+    const h = new Heap([], comparator);
+    h.push(1);
+    h.push(2);
+    h.push(3);
+
+    for (let i = 0; i < 1000; i++) {
+      const rnd = Math.floor(Math.random() * 10000);
+      h.push(rnd);
+    }
+    let min = Infinity;
+    for (let i = 0; i < 10; i++) {
+      const n = h.pop();
+      if (n > min) {
+        assert.equal(true, false);
+        break;
+      }
+      min = n;
+    }
+  });
+});
+
+describe("insertion-deletion", () => {
+  it("should be able to handle push/pop operation together correcrly", () => {
+    const comparator = (x1, x2) => x1 >= x2;
+    const h = new Heap([], comparator);
+
+    for (let i = 0; i < 1000; i++) h.push(i);
+    for (let i = 0; i < 1000; i++) {
+      h.pop();
+      h.push(i);
+    }
+    for (let i = 1000; i > 0; i--) {
+      h.pop();
+      h.push(i);
+    }
+    const incorrectRelationship = h.lookup.find(
+      (_, i) => h.validate(i) === false,
+    );
+    assert.equal(incorrectRelationship, undefined);
+  });
+});

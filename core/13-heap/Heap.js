@@ -12,9 +12,8 @@ class Heap {
     this.lookup.push(value);
     // Bubbling value up
     const position = this.lookup.length - 1;
-    this.heapifyUp(position);
-
     this.length += 1;
+    this.heapifyUp(position);
   }
 
   // T -> O(LogN)
@@ -27,8 +26,8 @@ class Heap {
     // last element and heapify it down
     this.lookup[0] = this.lookup[this.length - 1];
     this.lookup.pop();
-    this.heapifyDown(0);
     this.length -= 1;
+    this.heapifyDown(0);
 
     return out;
   }
@@ -40,20 +39,18 @@ class Heap {
       throw new Error(`${idx} is out of bounds`);
     }
 
-    let pos = idx;
-    const cmp = this.comparator.bind(
-      null,
-      this.lookup[pos],
-      this.lookup[this.#getParentIdx(pos)],
-    );
-
-    while (pos > 0 && cmp()) {
-      // Swapping elements
-      const tmp = this.lookup[pos];
-      this.lookup[pos] = this.lookup[this.#getParentIdx(pos)];
-      this.lookup[this.#getParentIdx(pos)] = tmp;
-      // Changing the position of heapifying up element
-      pos = this.#getParentIdx(pos);
+    while (idx > 0) {
+      const parentIdx = this.#getParentIdx(idx);
+      const needToSwap = this.comparator(
+        this.lookup[idx],
+        this.lookup[parentIdx],
+      );
+      if (needToSwap) {
+        const tmp = this.lookup[parentIdx];
+        this.lookup[parentIdx] = this.lookup[idx];
+        this.lookup[idx] = tmp;
+      }
+      idx = parentIdx;
     }
   }
 
