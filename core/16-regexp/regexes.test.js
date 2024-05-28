@@ -32,3 +32,22 @@ describe("2-number-separator", () => {
     "755884",
   ]);
 });
+
+describe("3-iterator", () => {
+  const iterate = require("./3-iterator.js");
+
+  it("should be able to iterate over the string correcrly", () => {
+    const str = '{"a": 1, "b": "2"}';
+    const iter = iterate(str);
+    const ziped = Array.from(iter).map((match) => [
+      match[0],
+      match[1],
+      match[2],
+    ]);
+
+    assert.deepEqual(ziped, [
+      ['"a": 1', "a", "1"],
+      ['"b": "2"', "b", '"2"'],
+    ]);
+  });
+});
