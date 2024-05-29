@@ -7,6 +7,9 @@ const ONE_MILLION = 1e6;
 
 function random(min = ZERO, max = ONE_MILLION) {
   return {
+    [Symbol.iterator]() {
+      return this;
+    },
     next() {
       return {
         done: false,

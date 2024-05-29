@@ -1,24 +1,13 @@
 const take = require("./take.js");
-const random = require("../01-rand.js");
-
-const iterable = {
-  collection: [1],
-  [Symbol.iterator]() {
-    let idx = 0;
-
-    return {
-      next: () => {
-        const done = idx >= this.collection.length;
-        const value = this.collection[idx];
-        idx += 1;
-        return { done, value };
-      },
-    };
-  },
-};
-
-// for (const value of iterable) console.log(value);
-// console.log(iterable[Symbol.iterator]().next());
+const random = require("../01-rand/rand.js");
+const { iterable } = require("../mocks/iterable.js");
 
 {
+  const rnd = random();
+  console.log([...take(rnd, 3)]);
+}
+
+{
+  console.log([...take(iterable, 5)]);
+  console.log([...take(iterable, 10)]);
 }
