@@ -1,7 +1,16 @@
 "use strict";
 
+/**
+ * Combines multiple iterables into a single iterable sequence.
+ * @param {Iterable<T>[]} iterables - The iterables to combine.
+ * @returns {Iterable<T>} An iterable sequence containing elements from all the input iterables.
+ */
 function seq(...iterables) {
   return {
+    /**
+     * Returns an iterator object that iterates over the combined sequence of iterables.
+     * @returns {Iterator<T>} An iterator object.
+     */
     [Symbol.iterator]() {
       if (iterables.length === 0) return this.consumedIterator();
 
@@ -24,6 +33,11 @@ function seq(...iterables) {
         },
       };
     },
+
+    /**
+     * Returns an iterator object that represents a consumed sequence.
+     * @returns {Iterator} An iterator object.
+     */
     consumedIterator() {
       return {
         next: () => ({ done: true, value: undefined }),
