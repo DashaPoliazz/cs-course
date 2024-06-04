@@ -20,8 +20,8 @@ class StringRange extends Range {
    */
   constructor(start, end, included = INCLUDED, step = DEFAULT_STEP) {
     super(start, end);
-    this.start = start.charCodeAt();
-    this.end = end.charCodeAt();
+    this.start = start.codePointAt(0);
+    this.end = end.codePointAt(0);
     this.included = included;
     this.step = step;
   }
@@ -44,7 +44,7 @@ class StringRange extends Range {
         const includedDone = value > this.end;
         const done = this.included ? includedDone : excludedDone;
         if (done) return { done, value: undefined };
-        return { done, value: String.fromCharCode(value) };
+        return { done, value: String.fromCodePoint(value) };
       },
     };
   }
