@@ -1,10 +1,10 @@
-class Inorder {
+class Preorder {
   constructor(domNode) {
     this.domNode = domNode;
   }
 
   static new(domNode) {
-    return new Inorder(domNode);
+    return new Preorder(domNode);
   }
 
   *[Symbol.iterator](domNode = this.domNode) {
@@ -17,4 +17,4 @@ class Inorder {
   }
 }
 
-module.exports = Inorder;
+module.exports = Preorder;

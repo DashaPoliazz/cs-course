@@ -1,7 +1,7 @@
 const { it, describe } = require("node:test");
 const assert = require("node:assert");
-const InorderIterator = require("./iteratorApproach.js");
-const InorderGenerator = require("./generatorApproach.js");
+const PreorderIterator = require("./iteratorApproach.js");
+const PreorderGenerator = require("./generatorApproach.js");
 const { JSDOM } = require("jsdom");
 
 it("should traverse inorder correcrly", () => {
@@ -30,8 +30,8 @@ it("should traverse inorder correcrly", () => {
 
   const { document } = dom.window;
   const body = document.getElementsByTagName("body")[0];
-  const iter = InorderIterator.new(body);
-  const gen = InorderGenerator.new(body);
+  const iter = PreorderIterator.new(body);
+  const gen = PreorderGenerator.new(body);
   assert.deepEqual(
     [...iter].map((n) => n.id),
     [
@@ -74,12 +74,12 @@ it("should traverse empty treee inorder correcrly", () => {
 
   const { document } = dom.window;
   const body = document.getElementsByTagName("body")[0];
-  const iter = InorderIterator.new(body);
+  const iter = PreorderIterator.new(body);
   assert.deepEqual(
     [...iter].map((n) => n.id),
     [],
   );
-  const gen = InorderGenerator.new(body);
+  const gen = PreorderGenerator.new(body);
   assert.deepEqual(
     [...iter].map((n) => n.id),
     [],
