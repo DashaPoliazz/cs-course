@@ -12,7 +12,6 @@ class Inorder {
   [Symbol.iterator]() {
     const stack = [];
     this.#fillStack(stack, this.domNode);
-    console.log("INIT", stack);
 
     return {
       next: () => {
@@ -25,7 +24,6 @@ class Inorder {
   }
 
   #fillStack = (stack, domNode) => {
-    console.log(domNode);
     const children = Array.from(domNode.children);
     if (!children.length) return;
     for (let i = children.length - 1; i >= 0; i--) stack.push(children[i]);
