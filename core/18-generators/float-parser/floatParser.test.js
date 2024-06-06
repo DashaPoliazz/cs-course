@@ -2,14 +2,26 @@ const assert = require("node:assert");
 const { it } = require("node:test");
 const floatParser = require("./floatParser.js");
 
-const iter = floatParser("hello 123 534.234 -56.78 9.0 100. 0.001 -0.5");
-console.log([...iter]);
-console.log(iter.next("534.234 -56.78 9.0 100"));
+const iter = floatParser("hello 123 534.234 -56.78 9.0");
+
+while (true) {
+  const nxt = iter.next();
+  console.log(nxt);
+  if (nxt === "#") iter.next("123.34 884.00");
+}
 
 try {
+  console.log(iter.next());
+  console.log(iter.next());
+  console.log(iter.next());
+  console.log(iter.next("534.234"));
+  console.log(iter.next());
 } catch (e) {
   // Expect new input
   console.log(e);
+  console.log(iter.next());
+  console.log(iter.next());
+
   //   numbers.next(newString);
 }
 

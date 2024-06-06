@@ -6,7 +6,10 @@ function* floatParser(text) {
   for (const floatintPointNumber of floatingPointNumbers) {
     yield floatintPointNumber[0];
   }
-  return floatParser(text);
+
+  yield "#";
+  const newText = yield "new Text provided";
+  yield* floatParser(newText);
 }
 
 module.exports = floatParser;
