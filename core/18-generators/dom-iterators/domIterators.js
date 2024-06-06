@@ -23,4 +23,4 @@ const { document } = dom.window;
 console.log(dom.serialize());
 
 const needle = document.getElementsByTagName("body");
-console.log("body", [...needle[0].children]);
+console.log("body", Array.from(needle[0].children));
