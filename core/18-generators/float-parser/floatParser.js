@@ -1,15 +1,35 @@
 "use strict";
 
-function* floatParser(text) {
-  const regex = /-?\d+\.\d+/g;
-  const floatingPointNumbers = text.matchAll(regex);
-  for (const floatintPointNumber of floatingPointNumbers) {
-    yield floatintPointNumber[0];
+const regex = /[+-]?(\d*\.\d+|\d+\.\d*)([eE][+-]?\d+)?/g;
+
+class FloatParser {
+  constructor(text) {
+    this.queue = [];
+    if (text) this.queue.push(text);
   }
 
-  yield "#";
-  const newText = yield "new Text provided";
-  yield* floatParser(newText);
+  static Parse(text) {
+    return new FloatParser(text);
+  }
+
+  iter() {
+    return this[Symbol.iterator]();
+  }
+
+  *[Symbol.iterator]() {
+    while (true) {
+      const text = this.queue.shift();
+      if (text) {
+        const floatNumbers = text.matchAll(regex);
+        for (const floatNumber of floatNumbers) {
+          const newText = yield floatNumber[0];
+          if (newText) this.queue.push(newText);
+        }
+      }
+      const newText = yield "_";
+      if (newText) this.queue.push(newText);
+    }
+  }
 }
 
-module.exports = floatParser;
+module.exports = FloatParser;

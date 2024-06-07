@@ -10,7 +10,7 @@
 
 ## Dom-iterators
 
-[alt text](DOM.png)
+[dom-tree](DOM.png)
 
 ```html
 <!DOCTYPE html>
