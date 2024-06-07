@@ -73,3 +73,44 @@ const body = dom.window.document.getElementById("div1");
 const sibilngs = Siblings(body);
 console.log([...sibilngs].map((domNode) => domNode.id)); // ["div2"]
 ```
+
+## Float-parser
+
+FloatParser is a class designed to parse floating-point numbers from a given text. It supports parsing both the initial text and additional text inputs provided during iteration. This makes it useful for scenarios where text data is streamed or appended incrementally.
+
+When the text has been consumed the iterator yield special symbol "\_".
+
+### Basic usages:
+
+```javascript
+const parser = FloatParser.Parse(
+  "hello 123 534.234 -56.78 9.0 100. 0.001 -0.5",
+);
+const iter = parser.iter();
+
+console.log(iter.next().value); // "534.234"
+console.log(iter.next().value); // "-56.78"
+console.log(iter.next().value); // "9.0"
+console.log(iter.next().value); // "100."
+console.log(iter.next().value); // "0.001"
+console.log(iter.next().value); // "-0.5"
+console.log(iter.next().value); // "_"
+
+iter.next("and 3.14 more text");
+console.log(iter.next().value); // "3.14"
+console.log(iter.next().value); // "_"
+```
+
+### Handling new text inputs:
+
+```javascript
+const parser = FloatParser.Parse("start 1.23");
+const iter = parser.iter();
+
+console.log(iter.next().value); // "1.23"
+console.log(iter.next().value); // "_"
+
+iter.next("additional 4.56 input");
+console.log(iter.next().value); // "4.56"
+console.log(iter.next().value); // "_"
+```
