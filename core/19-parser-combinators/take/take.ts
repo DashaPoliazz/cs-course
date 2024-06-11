@@ -20,6 +20,8 @@ const DEFAULT_OPTIONS: Options = {
 
 const TAG_TYPE = "TAKE";
 
+// TODO:
+// [ ] Should we throw when the collected values is less than min ?
 const take = (
   pattern: Pattern,
   options: Options = DEFAULT_OPTIONS,
@@ -45,7 +47,9 @@ const take = (
         matched += next.value;
         count -= 1;
       }
-      next = iter.next();
+
+      // don't move iter if the count is 1
+      if (count !== 1) next = iter.next();
     }
 
     const token = { type: TAG_TYPE, value: matched };

@@ -1,7 +1,6 @@
 import take from "./take";
 import { it } from "node:test";
 import assert from "node:assert";
-import { ParserResult } from "../types.js";
 
 it("should take the whole string", () => {
   const takeWhole = take(/\d/)("1234 foo");

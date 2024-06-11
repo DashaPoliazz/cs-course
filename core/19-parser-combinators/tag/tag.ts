@@ -18,6 +18,7 @@ const tag = (pattern: string): Parser<string, string> =>
       const iterator = iter.next();
       // Checking for parse-error
       if (iterator.done || iterator.value !== char) {
+        console.log("VLAUE", iterator.value);
         throw new ParseError(
           `Expected ${char} but receieved ${iterator.value}`,
         );
