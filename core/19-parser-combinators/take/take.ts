@@ -37,26 +37,15 @@ const take = (
     let count = options.max;
     let next = iter.next();
 
-    if (isRegExpPattern(pattern)) {
-      while (!next.done && count > 0) {
-        const isMatch = pattern.test(next.value);
-        if (isMatch) {
-          matched += next.value;
-          count -= 1;
-        }
-        next = iter.next();
+    while (!next.done && count > 0) {
+      const isMatch = isRegExpPattern(pattern)
+        ? pattern.test(next.value)
+        : pattern(next.value);
+      if (isMatch) {
+        matched += next.value;
+        count -= 1;
       }
-      const token = { type: TAG_TYPE, value: matched };
-      return [token, intoIterable(iter)];
-    } else {
-      while (!next.done && count > 0) {
-        const isMatch = pattern(next.value);
-        if (isMatch) {
-          matched += next.value;
-          count -= 1;
-        }
-        next = iter.next();
-      }
+      next = iter.next();
     }
 
     const token = { type: TAG_TYPE, value: matched };

@@ -3,9 +3,18 @@ import { it } from "node:test";
 import assert from "node:assert";
 import { ParserResult } from "../types.js";
 
-it("should works!", () => {
-  const takeNumber = take(/\d/)("1234 foo");
-  console.log(takeNumber.next()); // {done: true, value: {type: 'TAKE', value: '1234'}}
-  const takeNumber2 = take(/\d/, { max: 2, min: 0 })("1234 foo");
-  console.log(takeNumber2.next()); // {done: true, value: {type: 'TAKE', value: '12'}}
+it("should take the whole string", () => {
+  const takeWhole = take(/\d/)("1234 foo");
+
+  const result = takeWhole.next();
+  assert.strictEqual(result.done, true);
+  assert.deepStrictEqual(result.value[0], { type: "TAKE", value: "1234" });
+});
+
+it("should take a limited number of characters", () => {
+  const takeLimited = take(/\d/, { max: 2, min: 0 })("1234 foo");
+
+  const result = takeLimited.next();
+  assert.strictEqual(result.done, true);
+  assert.deepStrictEqual(result.value[0], { type: "TAKE", value: "12" });
 });
