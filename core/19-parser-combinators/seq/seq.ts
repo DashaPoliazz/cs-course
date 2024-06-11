@@ -13,7 +13,6 @@ const seq = (...parsers: Parser<string, string>[]): Parser<string, string> =>
     Iterable<string> | undefined
   > {
     let matched = [];
-    let iter = text[Symbol.iterator]();
     let iterable = text;
 
     for (const parser of parsers) {
@@ -22,11 +21,12 @@ const seq = (...parsers: Parser<string, string>[]): Parser<string, string> =>
       >;
       const [token, nextIterable] = value;
       iterable = nextIterable;
+
       matched.push(token.value);
     }
 
     const token = { type: TAG_TYPE, value: matched.join("") };
-    return [token, intoIterable(iter)];
+    return [token, iterable];
   };
 
 export default seq;
