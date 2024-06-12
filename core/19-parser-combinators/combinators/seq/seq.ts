@@ -1,5 +1,5 @@
-import { Parser, ParserResult, ParserToken, ParserValue } from "../types";
-import intoIterable from "../helpers/intoIterable";
+import { Parser, ParserResult, ParserToken, ParserValue } from "../../types";
+import intoIterable from "../../helpers/intoIterable";
 
 const TAG_TYPE = "SEQ";
 

@@ -1,4 +1,4 @@
-import { Parser, ParserResult, ParserToken, ParserValue } from "../types";
+import { Parser, ParserResult, ParserToken, ParserValue } from "../../types";
 
 const TAG_TYPE = "OPT";
 

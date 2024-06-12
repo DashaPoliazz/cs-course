@@ -15,13 +15,3 @@ it("should take the whole string", () => {
   assert.equal(done, true);
   assert.deepEqual(value[0], { type: "SEQ", value: "function foo()" });
 });
-
-it("should correcrly work with take", () => {
-  const s = seq(
-    take(/\d/, {
-      max: 3,
-      min: 0,
-    }),
-    tag(","),
-  )("100,200,300,");
-});

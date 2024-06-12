@@ -1,7 +1,7 @@
 import tag from "./tag";
 import { it } from "node:test";
 import assert from "node:assert";
-import { ParserResult } from "../types";
+import { ParserResult } from "../../types";
 // npx ts-node-dev --respawn --transpile-only src/index.ts
 
 it("should return correct token", () => {

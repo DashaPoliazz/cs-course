@@ -1,5 +1,5 @@
-import { Parser, ParserResult, ParserToken, ParserValue } from "../types";
-import intoIterable from "../helpers/intoIterable";
+import { Parser, ParserResult, ParserToken, ParserValue } from "../../types";
+import intoIterable from "../../helpers/intoIterable";
 
 type PatternFn = (char: string) => boolean;
 type PatternRegExp = RegExp;
@@ -20,8 +20,6 @@ const DEFAULT_OPTIONS: Options = {
 
 const TAG_TYPE = "TAKE";
 
-// TODO:
-// [ ] Should we throw when the collected values is less than min ?
 const take = (
   pattern: Pattern,
   options: Options = DEFAULT_OPTIONS,
@@ -38,7 +36,6 @@ const take = (
     let matched = "";
     let count = 0;
     let next = iter.next();
-    // console.log("cound: ", options.max);
 
     while (!next.done && count < options.max) {
       const isMatch = isRegExpPattern(pattern)

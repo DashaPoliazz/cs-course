@@ -1,6 +1,6 @@
-import { Parser, ParserResult, ParserToken, ParserValue } from "../types";
-import intoIterable from "../helpers/intoIterable";
-import ParseError from "../ParseError/ParseError";
+import { Parser, ParserResult, ParserToken, ParserValue } from "../../types";
+import intoIterable from "../../helpers/intoIterable";
+import ParseError from "../../ParseError/ParseError";
 
 const TAG_TYPE = "OR";
 

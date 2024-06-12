@@ -15,7 +15,7 @@ it("should return the first match value correcrly", () => {
     },
   )("100,200,300");
 
-  console.log(takeNumbers.next()); // {done: false, value: {type: 'SEQ', value: '100,'}}
-  console.log(takeNumbers.next()); // {done: false, value: {type: 'SEQ', value: '200,'}}
-  console.log(takeNumbers.next()); // {done: false, value: {type: 'SEQ', value: '300'}}
+  assert.deepEqual(takeNumbers.next().value, { type: "SEQ", value: "100," });
+  assert.deepEqual(takeNumbers.next().value, { type: "SEQ", value: "200," });
+  assert.deepEqual(takeNumbers.next().value, { type: "SEQ", value: "300" });
 });
