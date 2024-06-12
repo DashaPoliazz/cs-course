@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <input id="input" />
+    <script>
+      const debounce = (fn, ms) => {
+        let timeout;
+
+        return (...args) => {
+          if (timeout) clearTimeout(timeout);
+
+          timeout = setTimeout(() => {
+            fn(...args);
+          }, ms);
+        };
+      };
+
+      const input = document.getElementById("input");
+      const handler = (e) => console.log(e.target.value);
+      const debouncedHandler = debounce(handler, 1000);
+      const onChange = input.addEventListener("input", debouncedHandler);
+    </script>
+  </body>
+</html>
