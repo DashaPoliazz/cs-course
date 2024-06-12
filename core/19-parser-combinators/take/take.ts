@@ -36,20 +36,21 @@ const take = (
   > {
     const iter = text[Symbol.iterator]();
     let matched = "";
-    let count = options.max;
+    let count = 0;
     let next = iter.next();
+    // console.log("cound: ", options.max);
 
-    while (!next.done && count > 0) {
+    while (!next.done && count < options.max) {
       const isMatch = isRegExpPattern(pattern)
         ? pattern.test(next.value)
         : pattern(next.value);
       if (isMatch) {
         matched += next.value;
-        count -= 1;
+        count += 1;
+        if (count >= options.max) break;
       }
 
-      // don't move iter if the count is 1
-      if (count !== 1) next = iter.next();
+      next = iter.next();
     }
 
     const token = { type: TAG_TYPE, value: matched };

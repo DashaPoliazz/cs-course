@@ -15,5 +15,6 @@ it("should take a limited number of characters", () => {
 
   const result = takeLimited.next();
   assert.strictEqual(result.done, true);
+  console.log("RESULT:", result.value[0]);
   assert.deepStrictEqual(result.value[0], { type: "TAKE", value: "12" });
 });
