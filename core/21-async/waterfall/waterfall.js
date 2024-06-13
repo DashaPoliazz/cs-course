@@ -35,23 +35,4 @@ const waterfall = (flow, cb) => {
   swim(0);
 };
 
-// waterfall([
-//   (cb) => {
-//     cb(null, 'one', 'two');
-//   },
-
-//   (arg1, arg2, cb) => {
-//     console.log(arg1); // one
-//     console.log(arg2); // two
-//     cb(null, 'three');
-//   },
-
-//   (arg1, cb) => {
-//     console.log(arg1); // three
-//     cb(null, 'done');
-//   }
-// ], (err, result) => {
-//   console.log(result); // done
-// });
-
 module.exports = waterfall;
