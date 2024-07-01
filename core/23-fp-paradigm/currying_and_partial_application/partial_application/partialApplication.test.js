@@ -32,3 +32,15 @@ it("should return the same result as the original function when no arguments are
     "partialAdd(1, 2, 3) should equal add(1, 2, 3)",
   );
 });
+
+it("should be composable", () => {
+  const f11 = partial(add, 1);
+  const f12 = partial(f11, 2);
+  assert.equal(f12(3), 6);
+});
+
+const foo = (f, f2) => {
+  console.log(arguments.length);
+};
+
+console.log(foo.length);
