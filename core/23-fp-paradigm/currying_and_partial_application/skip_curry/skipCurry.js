@@ -1,7 +1,7 @@
 "use strict";
 
 const curry = (fn, ...params) => {
-  curry._ = "_";
+  curry._ = Symbol();
   // Incapsulating metadata in the closure keeping keys of curry untouched
   const collection = new Array(fn.length).fill(null);
   const hulls = [];
