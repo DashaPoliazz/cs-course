@@ -1,3 +1,5 @@
+"use strict";
+
 const curry = (f, ...args) => {
   const curried = (...params) => {
     return f.length > params.length

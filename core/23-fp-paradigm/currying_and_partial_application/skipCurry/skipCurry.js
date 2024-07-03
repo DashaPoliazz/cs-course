@@ -1,3 +1,5 @@
+"use strict";
+
 const curry = (fn, ...params) => {
   curry._ = "_";
   // Incapsulating metadata in the closure keeping keys of curry untouched
