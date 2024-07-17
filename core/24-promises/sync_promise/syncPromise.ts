@@ -27,10 +27,7 @@ class SyncPromise<T> {
     executer(this.resolve, this.reject);
   }
 
-  then<U>(
-    onFulfilled: KleislyArrow<T, U>,
-    onRejected: KleislyArrow<Error, U>,
-  ): SyncPromise<U> {}
+  then<U>(onResolve, onReject): SyncPromise<U> {}
 
   resolve(value: T): SyncPromise<T> {
     if (this.triggered) return this;
