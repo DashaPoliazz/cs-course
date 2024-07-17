@@ -69,3 +69,10 @@
     };
   }
 }
+
+{
+  const { EventEmitter } = require("node:events");
+  const ee = new EventEmitter();
+  ee.on("foo", (...args) => console.log(...args));
+  ee.emit("foo");
+}
