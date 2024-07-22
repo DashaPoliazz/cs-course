@@ -1,15 +1,6 @@
 import EventEmitter from "node:events";
 import { setTimeout } from "node:timers/promises";
-import { Options } from "./types";
-
-enum Commands {
-  ENQUEUE_TASK = "enqueueTak",
-}
-
-enum SchedulerState {
-  IN_WORK = "in_work",
-  IDLE = "idle",
-}
+import { Options, Commands, SchedulerState } from "./types";
 
 class Scheduler extends EventEmitter {
   state: SchedulerState;
@@ -25,6 +16,7 @@ class Scheduler extends EventEmitter {
     // We should not block main thread
     // and make scheduler work only if we have tasks
     this.on(Commands.ENQUEUE_TASK, () => {
+      console.log("emitted");
       if (this.state === SchedulerState.IDLE) {
         this.state = SchedulerState.IN_WORK;
         this.execute();
