@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 
 import promiseForEach from "./1-promise_forEach";
 import forEachParallel from "./2-threads_forEach";
-import asyncGenForEach from "./3-generators";
+import asyncGenForEach from "./3-generators_forEach";
 import assert from "node:assert";
 
 describe("promiseForEach", () => {

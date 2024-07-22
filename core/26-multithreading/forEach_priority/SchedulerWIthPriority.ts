@@ -1,8 +1,8 @@
 import EventEmitter from "events";
 import PriorityQueue from "../../13-heap/PQ";
-import Scheduler from "../multifreeze/Scheduler";
-import { Options, SchedulerState } from "../multifreeze/types";
-import { Commands } from "../multifreeze/types";
+import Scheduler from "../forEach_concurrent/Scheduler";
+import { Options, SchedulerState } from "../forEach_concurrent/types";
+import { Commands } from "../forEach_concurrent/types";
 import { setTimeout } from "timers/promises";
 
 enum PRIORITIES {
